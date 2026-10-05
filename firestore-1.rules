@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function chatDoc(cid) { return get(/databases/$(database)/documents/chats/$(cid)).data; }
+    function friendDoc(fid) { return get(/databases/$(database)/documents/friendships/$(fid)).data; }
+    function isMember(cid) { return me() in chatDoc(cid).members; }
+    // group chats are open to members; one-to-one chats only while the two are friends
+    function canWrite(cid) { return chatDoc(cid).type == 'group' || friendDoc(cid).status == 'accepted'; }
+
+    // ---- profiles: nobody can list or browse users, only open a profile whose id they already know ----
+    match /users/{uid} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn() && me() == uid
+        && (!('photo' in request.resource.data) || request.resource.data.photo.size() < 100000);
+      allow delete: if false;
+    }
+
+    // ---- find-by-number: key is p_<phone> or e_<email>. Only the account that owns that
+    // phone/email can create its entry, and entries cannot be listed. ----
+    match /lookup/{key} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == me()
+        && (
+          key == 'e_' + request.auth.token.email
+          || (key == 'p_' + request.auth.token.email.split('@')[0]
+              && request.auth.token.email.matches('.*@phone[.]prochat[.]app'))
+        );
+      allow delete: if false;
+    }
+
+    // ---- friend requests (document id = both user ids, sorted, joined by _) ----
+    match /friendships/{fid} {
+      allow get: if signedIn() && me() in resource.data.users;
+      allow list: if signedIn() && me() in resource.data.users;
+      allow create: if signedIn()
+        && request.resource.data.users.size() == 2
+        && me() in request.resource.data.users
+        && fid == request.resource.data.users[0] + '_' + request.resource.data.users[1]
+        && request.resource.data.requester == me()
+        && request.resource.data.status == 'pending';
+      // only the person who received the request can accept it
+      allow update: if signedIn()
+        && me() in resource.data.users
+        && resource.data.status == 'pending'
+        && resource.data.requester != me()
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.users == resource.data.users
+        && request.resource.data.requester == resource.data.requester;
+      allow delete: if signedIn() && me() in resource.data.users;
+    }
+
+    // ---- chats (one-to-one chat id = friendship id) ----
+    match /chats/{cid} {
+      allow get: if signedIn() && (resource == null || me() in resource.data.members);
+      allow list: if signedIn() && me() in resource.data.members;
+
+      allow create: if signedIn() && me() in request.resource.data.members && (
+        (request.resource.data.type == 'direct'
+          && request.resource.data.members.size() == 2
+          && friendDoc(cid).status == 'accepted'
+          && request.resource.data.members.hasAll(friendDoc(cid).users))
+        ||
+        (request.resource.data.type == 'group'
+          && request.resource.data.createdBy == me()
+          && request.resource.data.members.size() >= 2
+          && request.resource.data.members.size() <= 50)
+      );
+
+      allow update: if signedIn() && me() in resource.data.members && (
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['reads', 'lastMessage', 'lastSender', 'updatedAt'])
+        ||
+        (resource.data.type == 'group' && resource.data.createdBy == me()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['name', 'members']))
+      );
+      allow delete: if false;
+
+      match /messages/{mid} {
+        allow read: if signedIn() && isMember(cid);
+        allow create: if signedIn() && isMember(cid) && canWrite(cid)
+          && request.resource.data.senderId == me()
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.keys().hasOnly(['text', 'image', 'senderId', 'createdAt', 'deleted'])
+          && request.resource.data.text is string
+          && request.resource.data.image is string
+          && request.resource.data.text.size() <= 4000
+          && request.resource.data.image.size() < 900000;
+        // the sender can delete (blank out) their own message
+        allow update: if signedIn() && resource.data.senderId == me()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted', 'text', 'image']);
+        allow delete: if false;
+      }
+    }
+  }
+}
