@@ -1,0 +1,2192 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d6246e">
+<title>Pro chat</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #fff7fa; --surface: #ffffff; --fg: #2b1620; --muted: #8c6a79; --line: #f5dde7;
+  --pink: #d6246e; --pink-2: #ff5c9d; --pink-soft: #ffe4ef; --on-pink: #ffffff;
+  --mine: #fcd3e4; --theirs: #ffffff; --chat-bg: #fdeef4; --online: #22b565; --danger: #c62828;
+  --shadow: 0 6px 24px -10px rgba(190, 30, 100, .45);
+  --auth-bg: linear-gradient(160deg, #fff0f6, #ffd9e8 60%, #ffc2da);
+  --font: "Hind Siliguri", "Noto Sans Bengali", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="dark"] {
+  --bg: #1a0f15; --surface: #26161e; --fg: #fbe9f1; --muted: #c79bb0; --line: #3b2330;
+  --pink: #ff4d94; --pink-2: #ff7ab0; --pink-soft: #3d1f2e; --mine: #6a2447; --theirs: #2d1b25;
+  --chat-bg: #170d13; --danger: #ff8a80; --shadow: 0 6px 24px -10px rgba(0, 0, 0, .7);
+  --auth-bg: linear-gradient(160deg, #240f19, #3a1426 60%, #4d1633); color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #1a0f15; --surface: #26161e; --fg: #fbe9f1; --muted: #c79bb0; --line: #3b2330;
+    --pink: #ff4d94; --pink-2: #ff7ab0; --pink-soft: #3d1f2e; --mine: #6a2447; --theirs: #2d1b25;
+    --chat-bg: #170d13; --danger: #ff8a80; --shadow: 0 6px 24px -10px rgba(0, 0, 0, .7);
+    --auth-bg: linear-gradient(160deg, #240f19, #3a1426 60%, #4d1633); color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.5; overflow: hidden; }
+button, input, textarea { font-family: inherit; font-size: 1em; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--pink-2); outline-offset: 2px; }
+
+#app { position: relative; height: 100%; max-width: 620px; margin: 0 auto; background: var(--bg); overflow: hidden; }
+@media (min-width: 700px) { #app { box-shadow: 0 0 60px -20px rgba(190, 30, 100, .35); } }
+.view { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--bg); }
+.view.active { display: flex; }
+
+.head { flex: none; display: flex; align-items: center; gap: 10px; color: var(--on-pink);
+  background: linear-gradient(135deg, #d6246e, #ff5c9d); padding: 12px 14px; padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+.head h1 { margin: 0; font-size: 1.2em; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head .sub { font-size: .8em; opacity: .92; display: block; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head .titles { flex: 1; min-width: 0; cursor: pointer; }
+.head .titles h1 { flex: none; }
+.head .logo-sm { width: 32px; height: 32px; border-radius: 9px; flex: none; }
+.icon-btn { background: rgba(255, 255, 255, .18); border: 0; color: #fff; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.icon-btn svg { width: 22px; height: 22px; }
+
+.avatar { --s: 44px; width: var(--s); height: var(--s); border-radius: 50%; flex: none; position: relative; overflow: hidden;
+  background: linear-gradient(135deg, #ff5c9d, #d6246e); color: #fff; display: grid; place-items: center;
+  font-weight: 700; font-size: calc(var(--s) * .42); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avwrap { position: relative; flex: none; }
+.dot { position: absolute; right: 0; bottom: 0; width: 13px; height: 13px; border-radius: 50%; background: var(--online); border: 2px solid var(--surface); }
+.ring { padding: 3px; border-radius: 50%; background: linear-gradient(135deg, #ff5c9d, #d6246e); flex: none; }
+.ring.seen { background: var(--line); }
+.ring .avwrap { border: 2px solid var(--surface); border-radius: 50%; }
+
+.pane { flex: 1; min-height: 0; overflow-y: auto; display: none; padding-bottom: 90px; }
+.pane.active { display: block; }
+.row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.row.tap { cursor: pointer; }
+.row.tap:active { background: var(--pink-soft); }
+.row .grow { flex: 1; min-width: 0; }
+.row .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .small { font-size: .88em; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .time { font-size: .76em; color: var(--muted); }
+.row .rico { width: 40px; height: 40px; border-radius: 50%; background: var(--pink-soft); display: grid; place-items: center; font-size: 1.15em; flex: none; }
+.unread { min-width: 20px; height: 20px; border-radius: 10px; background: var(--pink); color: #fff; font-size: .72em; display: grid; place-items: center; padding: 0 6px; margin-top: 2px; }
+.section { padding: 14px 16px 6px; font-size: .82em; font-weight: 600; color: var(--pink); letter-spacing: .02em; }
+.empty { padding: 36px 24px; text-align: center; color: var(--muted); }
+.empty b { display: block; color: var(--fg); margin-bottom: 4px; font-size: 1.05em; }
+.note { padding: 12px 16px; color: var(--muted); font-size: .88em; }
+
+.btn { border: 0; border-radius: 12px; padding: 10px 18px; font-weight: 600; color: #fff; background: linear-gradient(135deg, #d6246e, #ff5c9d); box-shadow: var(--shadow); }
+.btn:disabled { opacity: .6; box-shadow: none; }
+.btn.sm { padding: 6px 14px; font-size: .9em; border-radius: 10px; }
+.btn.ghost { background: var(--pink-soft); color: var(--pink); box-shadow: none; }
+.btn.danger { background: transparent; color: var(--danger); box-shadow: none; border: 1px solid var(--line); }
+.field { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--surface); }
+.field:focus { outline: none; border-color: var(--pink-2); }
+textarea.field { resize: vertical; min-height: 84px; }
+.search { padding: 12px 16px; background: var(--bg); position: sticky; top: 0; z-index: 2; }
+
+.nav { flex: none; display: flex; background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.nav button { flex: 1; border: 0; background: none; padding: 8px 0 7px; display: flex; flex-direction: column; align-items: center; gap: 1px; color: var(--muted); font-size: .76em; position: relative; }
+.nav button svg { width: 24px; height: 24px; }
+.nav button.active { color: var(--pink); font-weight: 600; }
+.nav .badge { position: absolute; top: 4px; left: 54%; min-width: 18px; height: 18px; border-radius: 9px; background: var(--pink); color: #fff; font-size: .68em; display: grid; place-items: center; padding: 0 5px; }
+.fab { position: absolute; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); border-radius: 28px; padding: 13px 20px; display: flex; align-items: center; gap: 8px; z-index: 3; }
+.fab svg { width: 20px; height: 20px; }
+
+#auth { align-items: center; justify-content: center; padding: 24px; overflow-y: auto; background: var(--auth-bg); }
+.auth-box { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; margin: auto; }
+.auth-box .logo { width: 92px; height: 92px; border-radius: 26px; align-self: center; box-shadow: var(--shadow); }
+.auth-box h1 { margin: 6px 0 0; text-align: center; font-size: 1.9em; color: var(--pink); }
+.auth-box .tag { margin: -6px 0 6px; text-align: center; color: var(--muted); }
+.auth-box .hint { font-size: .82em; color: var(--muted); margin-top: -4px; }
+.error { color: var(--danger); text-align: center; min-height: 1.3em; font-size: .92em; }
+.linkbtn { background: none; border: 0; color: var(--pink); font-weight: 600; padding: 6px; }
+.auth-box .btn { padding: 13px; }
+
+/* chat */
+#chatSearchBar { flex: none; padding: 8px 12px; background: var(--bg); border-bottom: 1px solid var(--line); }
+#msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px; background: var(--wall, var(--chat-bg)); display: flex; flex-direction: column; gap: 3px; }
+.m { display: flex; flex-direction: column; max-width: 84%; }
+.m.mine { align-self: flex-end; align-items: flex-end; }
+.m.theirs { align-self: flex-start; align-items: flex-start; }
+.bubble { padding: 7px 11px 4px; border-radius: 16px; background: var(--theirs); box-shadow: 0 1px 1px rgba(120, 30, 70, .12); word-break: break-word; overflow-wrap: anywhere; min-width: 64px; cursor: pointer; }
+.m.mine .bubble { background: var(--mine); border-bottom-right-radius: 5px; }
+.m.theirs .bubble { border-bottom-left-radius: 5px; }
+.bubble .who { font-size: .78em; font-weight: 700; color: var(--pink); }
+.bubble .txt { white-space: pre-wrap; }
+.bubble .gone { font-style: italic; color: var(--muted); }
+.picwrap { position: relative; cursor: zoom-in; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.picwrap img { pointer-events: none; }
+.bubble .more { border: 0; background: none; color: var(--muted); font-size: 1.1em; line-height: 1; padding: 0 4px; cursor: pointer; }
+.bubble img.pic { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; display: block; max-width: min(260px, 100%); max-height: 320px; border-radius: 10px; margin: 2px 0; cursor: zoom-in; }
+.bubble audio { display: block; width: 230px; max-width: 100%; height: 40px; margin: 2px 0; }
+.bubble .meta { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: .68em; color: var(--muted); margin-top: 1px; }
+.tick { font-weight: 700; letter-spacing: -2px; }
+.tick.seen { color: #e0207a; }
+:root[data-theme="dark"] .tick.seen { color: #ff8cbc; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tick.seen { color: #ff8cbc; } }
+.quote { border-left: 3px solid var(--pink); background: rgba(214, 36, 110, .09); border-radius: 8px; padding: 3px 8px; margin-bottom: 4px; font-size: .86em; }
+.quote b { color: var(--pink); display: block; font-size: .92em; }
+.quote span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 230px; color: var(--muted); }
+.reacts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.reacts span { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 7px; font-size: .82em; }
+.card { display: block; min-width: 200px; }
+.card .ct { font-weight: 700; }
+.card .cs { font-size: .88em; color: var(--muted); }
+.card a { color: var(--pink); font-weight: 600; }
+.opt { position: relative; display: block; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 6px 10px; margin-top: 5px; overflow: hidden; }
+.opt i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--pink-soft); z-index: 0; }
+.opt span { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 10px; }
+.opt.mine-v { border-color: var(--pink); }
+.evbtns { display: flex; gap: 6px; margin-top: 6px; }
+.composer { flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 8px 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); }
+.composer .field { border-radius: 22px; padding: 10px 16px; max-height: 120px; resize: none; line-height: 1.4; }
+.circle { width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center; flex: none; }
+.circle.attach { background: var(--pink-soft); color: var(--pink); }
+.circle.send { background: linear-gradient(135deg, #d6246e, #ff5c9d); color: #fff; }
+.circle svg { width: 22px; height: 22px; }
+#replyBar { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--bg); border-top: 1px solid var(--line); font-size: .88em; }
+#replyBar .quote { flex: 1; margin: 0; min-width: 0; }
+#recBar { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); }
+#recBar .rd { color: #e0207a; font-weight: 700; flex: 1; }
+
+/* sheets and forms */
+#sheetWrap { position: fixed; inset: 0; z-index: 40; background: rgba(20, 5, 12, .5); display: flex; align-items: flex-end; justify-content: center; }
+#sheet { width: 100%; max-width: 620px; background: var(--surface); border-radius: 22px 22px 0 0; padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px)); max-height: 82vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+#sheet .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--line); align-self: center; margin-bottom: 4px; }
+.stitle { font-weight: 700; font-size: 1.05em; padding: 2px 2px 4px; }
+.sitem { border: 0; background: none; text-align: left; padding: 12px 8px; border-radius: 10px; font-size: 1em; display: block; width: 100%; }
+.sitem:active { background: var(--pink-soft); }
+.sitem.danger { color: var(--danger); }
+.emojis { display: flex; justify-content: space-around; padding: 4px 0 8px; border-bottom: 1px solid var(--line); }
+.emojis button { border: 0; background: none; font-size: 1.7em; border-radius: 50%; width: 46px; height: 46px; }
+.emojis button.on { background: var(--pink-soft); }
+.agrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 6px 0; }
+.agrid button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: .9em; }
+.agrid .ai { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 1.6em; background: var(--pink-soft); }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
+.swatches button { width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; }
+.swatches button.on { border-color: var(--pink); }
+
+/* sub pages */
+#subBody { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 30px; }
+.prof { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 20px 8px; }
+.prof .avatar { --s: 112px; }
+.prof .box { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 10px; }
+.prof .info { text-align: center; color: var(--muted); font-size: .92em; }
+.pad { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.check { width: 22px; height: 22px; accent-color: var(--pink); flex: none; }
+.faq b { display: block; margin-bottom: 2px; }
+.faq p { margin: 0; color: var(--muted); }
+
+/* stories */
+.stext { display: grid; place-items: center; text-align: center; padding: 28px; font-size: 1.6em; font-weight: 600; color: #fff; width: 100%; height: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+#story { position: fixed; inset: 0; z-index: 55; background: #000; display: flex; flex-direction: column; max-width: 620px; margin: 0 auto; color: #fff; }
+#storyBars { display: flex; gap: 4px; padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 6px; }
+#storyBars i { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .35); }
+#storyBars i.done { background: #fff; }
+#storyHead { display: flex; align-items: center; gap: 10px; padding: 4px 12px 8px; }
+#storyHead .grow { flex: 1; min-width: 0; line-height: 1.2; }
+#storyHead small { opacity: .8; }
+#storyBody { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; }
+#storyBody img { max-width: 100%; max-height: 100%; }
+#storyBody .cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px; background: linear-gradient(transparent, rgba(0, 0, 0, .7)); text-align: center; }
+.zone { position: absolute; top: 0; bottom: 0; width: 38%; background: none; border: 0; }
+#storyFoot { display: flex; justify-content: center; gap: 10px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
+#storyFoot .btn { background: rgba(255, 255, 255, .18); box-shadow: none; }
+
+#call { position: fixed; inset: 0; z-index: 65; background: #14070e; color: #fff; display: flex; flex-direction: column; max-width: 620px; margin: 0 auto; }
+#remoteVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #14070e; }
+#remoteVideo.off { width: 2px; height: 2px; opacity: 0; }
+#localVideo { position: absolute; right: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); width: 28vw; max-width: 130px; aspect-ratio: 3/4; object-fit: cover; border-radius: 14px; background: #000; border: 2px solid rgba(255,255,255,.5); transform: scaleX(-1); z-index: 2; }
+#callInfo { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 20px; text-shadow: 0 1px 6px rgba(0,0,0,.6); pointer-events: none; }
+#callInfo.live-video { justify-content: flex-start; padding-top: calc(16px + env(safe-area-inset-top, 0px)); align-items: flex-start; text-align: left; }
+#callInfo.live-video #callAv { display: none; }
+#callName { font-size: 1.5em; font-weight: 700; }
+#callStatus { opacity: .9; }
+#callNote { font-size: .85em; background: rgba(0,0,0,.45); border-radius: 12px; padding: 6px 12px; max-width: 90%; }
+#callNote:empty { display: none; }
+#callBtns { position: relative; z-index: 2; display: flex; justify-content: center; gap: 16px; padding: 16px 12px calc(28px + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
+#callBtns button { width: 60px; height: 60px; border-radius: 50%; border: 0; background: rgba(255,255,255,.2); color: #fff; font-size: 1.5em; display: grid; place-items: center; }
+#callBtns button.off { background: #fff; color: #333; }
+#callBtns button.end { background: #e53935; }
+#callBtns button.acc { background: #22b565; }
+#toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: #3a1a29; color: #fff; padding: 10px 18px; border-radius: 22px; font-size: .92em; opacity: 0; pointer-events: none; transition: .25s; z-index: 70; max-width: 90vw; text-align: center; }
+#toast { z-index: 80; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#viewer { position: fixed; inset: 0; background: rgba(20, 5, 12, .94); z-index: 60; display: grid; place-items: center; padding: 12px; }
+#viewer img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- লগইন / সাইন আপ -->
+  <section id="auth" class="view active">
+    <div class="auth-box">
+      <img class="logo" src="icon-192.png" alt="Pro chat">
+      <h1>Pro chat</h1>
+      <p class="tag">বন্ধুদের সাথে সহজ চ্যাট</p>
+      <input id="name" class="field" type="text" placeholder="আপনার নাম" autocomplete="name" hidden>
+      <input id="login" class="field" type="text" placeholder="ইমেইল বা ফোন নম্বর" autocomplete="username" autocapitalize="none">
+      <input id="password" class="field" type="password" placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)" autocomplete="current-password">
+      <div id="authHint" class="hint" hidden>ফোন নম্বর দিলে পরে সেই নম্বর ও পাসওয়ার্ড দিয়েই লগইন করতে পারবেন। পাসওয়ার্ড মনে রাখুন, ভুলে গেলে ফেরত পাওয়ার উপায় নেই।</div>
+      <div id="authError" class="error" role="alert"></div>
+      <button id="authBtn" class="btn">লগইন</button>
+      <button id="toggleBtn" class="linkbtn">অ্যাকাউন্ট নেই? সাইন আপ করুন</button>
+    </div>
+  </section>
+
+  <!-- মূল পর্দা -->
+  <section id="main" class="view">
+    <header class="head">
+      <img class="logo-sm" src="icon-192.png" alt="">
+      <h1 id="mainTitle">Pro chat</h1>
+    </header>
+
+    <div id="paneChats" class="pane active"><div id="chatList"></div></div>
+
+    <div id="paneStatus" class="pane"><div id="statusList"></div></div>
+
+    <div id="paneFriends" class="pane">
+      <div class="search">
+        <form id="searchForm" style="display:flex;gap:8px" autocomplete="off">
+          <input id="searchBox" class="field" type="search" inputmode="search" placeholder="বন্ধুর ফোন নম্বর বা ইমেইল" autocomplete="off">
+          <button class="btn" type="submit">খুঁজুন</button>
+        </form>
+        <div style="font-size:.8em;color:var(--muted);margin:6px 2px 0">নাম দিয়ে খোঁজা যায় না। সঠিক নম্বর বা ইমেইল জানা থাকলে তবেই পাওয়া যাবে।</div>
+      </div>
+      <div id="searchResults"></div>
+      <div id="requestBox"></div>
+      <div id="friendList"></div>
+    </div>
+
+    <div id="paneCalls" class="pane"><div id="callList"></div></div>
+
+    <div id="paneSettings" class="pane"><div id="settingsList"></div></div>
+
+    <button id="fab" class="btn fab"></button>
+
+    <nav class="nav">
+      <button data-tab="Chats" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>চ্যাট<span id="badgeChats" class="badge" hidden></span>
+      </button>
+      <button data-tab="Status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8.5" stroke-dasharray="4 3"/><circle cx="12" cy="12" r="3.5"/></svg>স্টোরি<span id="badgeStatus" class="badge" hidden></span>
+      </button>
+      <button data-tab="Friends">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6M17 5.5a3.2 3.2 0 0 1 0 6.2M18.5 14.3c2 .6 3.2 2.5 3.2 5.2"/></svg>বন্ধু<span id="badgeFriends" class="badge" hidden></span>
+      </button>
+      <button data-tab="Calls">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>কল<span id="badgeCalls" class="badge" hidden></span>
+      </button>
+      <button data-tab="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg>সেটিংস
+      </button>
+    </nav>
+  </section>
+
+  <!-- চ্যাট -->
+  <section id="chat" class="view">
+    <header class="head">
+      <button id="backBtn" class="icon-btn" aria-label="পিছনে"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div id="chatAvatar"></div>
+      <div class="titles" id="chatTitles"><h1 id="chatTitle"></h1><span id="chatSub" class="sub"></span></div>
+      <button id="videoBtn" class="icon-btn" aria-label="ভিডিও কল"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="3"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></svg></button>
+      <button id="callBtn" class="icon-btn" aria-label="অডিও কল"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></button>
+      <button id="moreBtn" class="icon-btn" aria-label="আরও"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg></button>
+    </header>
+    <div id="chatSearchBar" hidden><input id="chatSearch" class="field" type="search" placeholder="এই চ্যাটে খুঁজুন"></div>
+    <div id="msgs"></div>
+    <div id="replyBar" hidden><div class="quote"><b id="replyWho"></b><span id="replyTxt"></span></div><button type="button" id="replyX" class="icon-btn" style="background:var(--pink-soft);color:var(--pink);width:34px;height:34px" aria-label="বাতিল">✕</button></div>
+    <form id="sendForm" class="composer" autocomplete="off">
+      <button type="button" id="attachBtn" class="circle attach" aria-label="সংযুক্ত করুন">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <input id="msgInput" class="field" type="text" placeholder="মেসেজ লিখুন" enterkeyhint="send">
+      <button type="button" id="micBtn" class="circle attach" aria-label="ভয়েস মেসেজ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </button>
+      <button type="submit" class="circle send" aria-label="পাঠান">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4l17.5-7.9a.6.6 0 0 0 0-1.1L3.4 3.6a.6.6 0 0 0-.85.7L4.9 11l9 1-9 1-2.35 6.7a.6.6 0 0 0 .85.7z"/></svg>
+      </button>
+    </form>
+    <div id="recBar" hidden>
+      <button type="button" id="recCancel" class="btn ghost sm">বাতিল</button>
+      <span class="rd">🔴 রেকর্ডিং… <span id="recT">0:00</span></span>
+      <button type="button" id="recSend" class="btn sm">পাঠান</button>
+    </div>
+    <input id="fileGallery" type="file" accept="image/*" hidden>
+    <input id="fileCamera" type="file" accept="image/*" capture="environment" hidden>
+    <input id="fileDoc" type="file" hidden>
+    <input id="fileAudio" type="file" accept="audio/*" capture hidden>
+  </section>
+
+  <!-- নতুন গ্রুপ -->
+  <section id="group" class="view">
+    <header class="head">
+      <button id="groupBack" class="icon-btn" aria-label="পিছনে"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h1>নতুন গ্রুপ</h1>
+    </header>
+    <div style="padding:12px 16px"><input id="groupName" class="field" type="text" placeholder="গ্রুপের নাম" maxlength="40"></div>
+    <div class="section">বন্ধুদের বেছে নিন</div>
+    <div id="groupPick" class="pane active" style="padding-bottom:90px"></div>
+    <div style="padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)">
+      <button id="groupCreate" class="btn" style="width:100%;padding:13px">গ্রুপ তৈরি করুন</button>
+    </div>
+  </section>
+
+  <!-- সাবপেজ (সেটিংস, তথ্য ইত্যাদি) -->
+  <section id="sub" class="view">
+    <header class="head">
+      <button id="subBack" class="icon-btn" aria-label="পিছনে"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h1 id="subTitle"></h1>
+    </header>
+    <div id="subBody"></div>
+  </section>
+</div>
+
+<!-- স্টোরি দেখা -->
+<div id="call" hidden>
+  <video id="remoteVideo" autoplay playsinline></video>
+  <video id="localVideo" autoplay playsinline muted hidden></video>
+  <div id="callInfo"><div id="callAv"></div><div id="callName"></div><div id="callStatus"></div><div id="callNote"></div></div>
+  <div id="callBtns">
+    <button id="cMute" aria-label="মাইক">🎤</button>
+    <button id="cCam" aria-label="ক্যামেরা">📷</button>
+    <button id="cFlip" aria-label="ক্যামেরা ঘোরান">🔄</button>
+    <button id="cAcc" class="acc" aria-label="গ্রহণ">📞</button>
+    <button id="cEnd" class="end" aria-label="শেষ">📵</button>
+  </div>
+</div>
+<div id="story" hidden>
+  <div id="storyBars"></div>
+  <div id="storyHead"></div>
+  <div id="storyBody"></div>
+  <div id="storyFoot"></div>
+</div>
+
+<div id="sheetWrap" hidden><div id="sheet"><div class="grip"></div><div id="sheetBody"></div></div></div>
+<div id="toast" role="status"></div>
+<div id="viewer" hidden><img alt=""></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, reauthenticateWithCredential, EmailAuthProvider, updatePassword }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, deleteField, query, where, orderBy, limit, onSnapshot, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBJQWzfOa5bYCSnzKJY6AOCqNVkAYYYDyE",
+  authDomain: "prochat-753ab.firebaseapp.com",
+  projectId: "prochat-753ab",
+  storageBucket: "prochat-753ab.firebasestorage.app",
+  messagingSenderId: "849385728672",
+  appId: "1:849385728672:web:b5af76a78541e4657ab7c5"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ---------------- helpers ---------------- */
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const SNAP = { serverTimestamps: "estimate" };
+const ms = (t) => (t && typeof t.toMillis === "function") ? t.toMillis() : 0;
+const fid = (a, b) => [a, b].sort().join("_");
+const PHONE_DOMAIN = "@phone.prochat.app";
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+/* ---- device settings (stay on this phone) ---- */
+const settings = Object.assign({ theme: "auto", fs: 16, wall: "", sound: true, notif: false, imgq: "good" }, LS.get("pc_settings", {}));
+function applySettings() {
+  const r = document.documentElement;
+  if (settings.theme === "auto") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", settings.theme);
+  document.body.style.fontSize = settings.fs + "px";
+  if (settings.wall) r.style.setProperty("--wall", settings.wall); else r.style.removeProperty("--wall");
+}
+function saveSettings() { LS.set("pc_settings", settings); applySettings(); }
+applySettings();
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
+}
+let lastErrToast = 0;
+function onErr(e) {
+  console.error(e);
+  if (Date.now() - lastErrToast < 6000) return;
+  lastErrToast = Date.now();
+  if (e && e.code === "permission-denied") toast("ডেটাবেসের নিয়ম (Rules) ঠিক নেই। নতুন নিয়ম প্রকাশ করা হয়েছে কি?");
+  else toast("কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন");
+}
+
+function normPhone(s) {
+  s = String(s).replace(/[০-৯]/g, (c) => "০১২৩৪৫৬৭৮৯".indexOf(c));
+  let d = s.replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  if (d.startsWith("880")) { /* ok */ }
+  else if (d.startsWith("0") && d.length === 11) d = "880" + d.slice(1);
+  else if (d.length === 10 && d.startsWith("1")) d = "880" + d;
+  return (d.length >= 10 && d.length <= 15) ? d : null;
+}
+function parseLogin(raw) {
+  const v = raw.trim();
+  if (v.includes("@")) return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? { email: v.toLowerCase(), phone: "" } : null;
+  const p = normPhone(v);
+  return p ? { email: p + PHONE_DOMAIN, phone: p } : null;
+}
+function authError(code) {
+  const map = {
+    "auth/invalid-email": "ইমেইল বা ফোন নম্বর সঠিক নয়",
+    "auth/invalid-credential": "নম্বর/ইমেইল বা পাসওয়ার্ড ভুল",
+    "auth/user-not-found": "নম্বর/ইমেইল বা পাসওয়ার্ড ভুল",
+    "auth/wrong-password": "নম্বর/ইমেইল বা পাসওয়ার্ড ভুল",
+    "auth/email-already-in-use": "এই নম্বর/ইমেইল দিয়ে আগেই অ্যাকাউন্ট আছে",
+    "auth/weak-password": "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের দিন",
+    "auth/network-request-failed": "ইন্টারনেট সংযোগ পরীক্ষা করুন",
+    "auth/too-many-requests": "অনেকবার চেষ্টা হয়েছে, একটু পরে আবার করুন",
+    "auth/operation-not-allowed": "Firebase-এ Email/Password চালু করা নেই",
+    "auth/unauthorized-domain": "এই সাইটের ঠিকানা Firebase-এর Authorized domains-এ যোগ করুন",
+    "permission-denied": "ডেটাবেসের নিয়ম (Rules) ঠিক নেই"
+  };
+  return map[code] || ("সমস্যা হয়েছে: " + code);
+}
+
+function fmtTime(t) {
+  const m = typeof t === "number" ? t : ms(t); if (!m) return "";
+  try { return new Date(m).toLocaleTimeString("bn-BD", { hour: "numeric", minute: "2-digit" }); }
+  catch { return new Date(m).toLocaleTimeString(); }
+}
+function fmtListTime(t) {
+  const m = typeof t === "number" ? t : ms(t); if (!m) return "";
+  const d = new Date(m), now = new Date();
+  if (d.toDateString() === now.toDateString()) return fmtTime(m);
+  try { return d.toLocaleDateString("bn-BD", { day: "numeric", month: "short" }); } catch { return d.toLocaleDateString(); }
+}
+const ONLINE_MS = 75000;
+const hidesSeen = (p) => p && p.hideSeen && !(me && p.uid === me.uid);
+const isOnline = (p) => p && p.lastSeen && !hidesSeen(p) && (Date.now() - ms(p.lastSeen) < ONLINE_MS);
+function statusText(p) {
+  if (!p || !p.lastSeen || hidesSeen(p)) return "";
+  if (isOnline(p)) return "অনলাইন";
+  const d = new Date(ms(p.lastSeen)), now = new Date();
+  if (d.toDateString() === now.toDateString()) return "শেষ দেখা: আজ " + fmtTime(p.lastSeen);
+  return "শেষ দেখা: " + fmtListTime(p.lastSeen);
+}
+const initial = (n) => { n = (n || "?").trim(); return n ? Array.from(n)[0].toUpperCase() : "?"; };
+function avatar(p, size, withDot) {
+  const wrap = el("div", "avwrap");
+  const a = el("div", "avatar"); a.style.setProperty("--s", size + "px");
+  if (p && p.photo) { const i = document.createElement("img"); i.src = p.photo; i.alt = ""; a.appendChild(i); }
+  else a.textContent = initial(p && p.name);
+  wrap.appendChild(a);
+  if (withDot && isOnline(p)) wrap.appendChild(el("span", "dot"));
+  return wrap;
+}
+
+/* image / file helpers: everything is shrunk and kept in the database (no paid Storage needed) */
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file); const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("img")); };
+    img.src = url;
+  });
+}
+async function shrink(file, max) {
+  if (settings.imgq === "small") max = Math.min(max, 640);
+  const img = await loadImage(file);
+  const s = Math.min(1, max / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * s)), h = Math.max(1, Math.round(img.height * s));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+  let q = settings.imgq === "small" ? 0.55 : 0.72, out = c.toDataURL("image/jpeg", q);
+  while (out.length > 800000 && q > 0.35) { q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+  if (out.length > 800000) throw new Error("big");
+  return out;
+}
+async function squarePhoto(file, size) {
+  const img = await loadImage(file);
+  const m = Math.min(img.width, img.height);
+  const c = document.createElement("canvas"); c.width = size; c.height = size;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, size, size);
+  return c.toDataURL("image/jpeg", 0.8);
+}
+function toDataURL(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+}
+function beep() {
+  try {
+    const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = 0.08; o.start(); o.stop(a.currentTime + 0.12);
+  } catch {}
+}
+
+/* ---------------- state ---------------- */
+let me = null, started = false, signingUp = false;
+let isLogin = true;
+const profiles = new Map(), profileUnsubs = new Map();
+let friendships = [], chats = [], stories = [], blocks = [];
+let sessionUnsubs = [];
+let current = null, currentData = null, lastMsgs = [];
+let unsubMsgs = null, unsubChat = null, markedFor = null;
+let chatFilter = "", replyTo = null;
+let firstChats = true;
+const msgEls = new Map();
+let beatTimer = null, tickTimer = null;
+let subStack = [];
+let isAdmin = false;
+let callsAll = [];
+
+const P = (uid) => profiles.get(uid) || null;
+const pName = (uid) => (P(uid) && P(uid).name) || "…";
+function ensureProfile(uid) {
+  if (!uid || profileUnsubs.has(uid)) return;
+  const un = onSnapshot(doc(db, "users", uid), (s) => {
+    profiles.set(uid, s.exists() ? s.data(SNAP) : { uid, name: "ব্যবহারকারী" });
+    scheduleRender();
+  }, onErr);
+  profileUnsubs.set(uid, un);
+}
+let rafPending = false;
+function scheduleRender() {
+  if (rafPending) return; rafPending = true;
+  requestAnimationFrame(() => { rafPending = false; renderAll(); });
+}
+function show(id) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  $(id).classList.add("active");
+}
+
+/* ---------------- sheets & forms ---------------- */
+function openSheet(build) {
+  const b = $("sheetBody"); b.textContent = ""; build(b); $("sheetWrap").hidden = false;
+}
+function closeSheet() { $("sheetWrap").hidden = true; $("sheetBody").textContent = ""; }
+$("sheetWrap").addEventListener("click", (e) => { if (e.target.id === "sheetWrap") closeSheet(); });
+function sheetItem(label, fn, cls) {
+  const b = el("button", "sitem " + (cls || ""), label); b.type = "button";
+  b.onclick = () => { closeSheet(); fn(); }; return b;
+}
+function openForm(title, fields, submitLabel, onSubmit) {
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", title));
+    const getters = {};
+    fields.forEach((f) => {
+      if (f.type === "colors") {
+        const wrap = el("div", "swatches"); let sel = f.colors[0];
+        f.colors.forEach((c) => {
+          const s = el("button", c === sel ? "on" : ""); s.type = "button"; s.style.background = c; s.setAttribute("aria-label", "রং");
+          s.onclick = () => { sel = c; wrap.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === s)); };
+          wrap.appendChild(s);
+        });
+        getters[f.key] = () => sel; b.appendChild(wrap); return;
+      }
+      const i = f.type === "textarea" ? document.createElement("textarea") : document.createElement("input");
+      if (f.type && f.type !== "textarea") i.type = f.type;
+      i.className = "field"; i.placeholder = f.ph || ""; i.value = f.value || ""; if (f.max) i.maxLength = f.max;
+      if (f.id) i.id = f.id;
+      getters[f.key] = () => i.value.trim(); b.appendChild(i);
+    });
+    const err = el("div", "error"); const ok = el("button", "btn", submitLabel); ok.type = "button";
+    ok.onclick = async () => {
+      const v = {}; for (const k in getters) v[k] = getters[k]();
+      ok.disabled = true;
+      let msg = null; try { msg = await onSubmit(v); } catch (e) { onErr(e); msg = "সমস্যা হয়েছে"; }
+      ok.disabled = false;
+      if (msg) err.textContent = msg; else closeSheet();
+    };
+    b.append(err, ok);
+  });
+}
+
+/* ---------------- auth ---------------- */
+$("toggleBtn").onclick = () => {
+  isLogin = !isLogin;
+  $("name").hidden = isLogin; $("authHint").hidden = isLogin;
+  $("authBtn").textContent = isLogin ? "লগইন" : "সাইন আপ";
+  $("toggleBtn").textContent = isLogin ? "অ্যাকাউন্ট নেই? সাইন আপ করুন" : "আগেই অ্যাকাউন্ট আছে? লগইন করুন";
+  $("password").autocomplete = isLogin ? "current-password" : "new-password";
+  $("authError").textContent = "";
+};
+$("authBtn").onclick = async () => {
+  const name = $("name").value.trim(), raw = $("login").value, pass = $("password").value;
+  const err = (t) => { $("authError").textContent = t; };
+  err("");
+  if (!raw.trim() || !pass || (!isLogin && !name)) return err("সব ঘর পূরণ করুন");
+  const id = parseLogin(raw);
+  if (!id) return err("সঠিক ইমেইল বা ফোন নম্বর দিন (যেমন 01712345678)");
+  $("authBtn").disabled = true;
+  try {
+    if (isLogin) {
+      await signInWithEmailAndPassword(auth, id.email, pass);
+    } else {
+      signingUp = true;
+      const cred = await createUserWithEmailAndPassword(auth, id.email, pass);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, "users", cred.user.uid), {
+        uid: cred.user.uid, name, about: "",
+        email: id.phone ? "" : id.email, phone: id.phone, photo: "",
+        createdAt: serverTimestamp(), lastSeen: serverTimestamp()
+      });
+      await setDoc(doc(db, "lookup", id.phone ? "p_" + id.phone : "e_" + id.email), { uid: cred.user.uid });
+      signingUp = false;
+      await startSession(cred.user);
+    }
+  } catch (e) {
+    err(authError(e.code || e.message));
+    signingUp = false;
+    if (auth.currentUser && !started) startSession(auth.currentUser);
+  } finally { signingUp = false; $("authBtn").disabled = false; }
+};
+$("password").addEventListener("keydown", (e) => { if (e.key === "Enter") $("authBtn").click(); });
+
+onAuthStateChanged(auth, (user) => {
+  if (signingUp) return;
+  if (user) { if (!started) startSession(user); }
+  else endSession();
+});
+
+async function ensureUserDoc(user) {
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+  const isPhone = (user.email || "").endsWith(PHONE_DOMAIN);
+  const name = user.displayName || "ব্যবহারকারী";
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      uid: user.uid, name, about: "",
+      email: isPhone ? "" : (user.email || ""), phone: isPhone ? user.email.slice(0, -PHONE_DOMAIN.length) : "",
+      photo: "", createdAt: serverTimestamp(), lastSeen: serverTimestamp()
+    });
+  }
+  const key = isPhone ? "p_" + user.email.slice(0, -PHONE_DOMAIN.length) : "e_" + (user.email || "").toLowerCase();
+  const lk = doc(db, "lookup", key);
+  if (!(await getDoc(lk)).exists()) await setDoc(lk, { uid: user.uid });
+}
+
+async function startSession(user) {
+  if (started) return; started = true; me = user; firstChats = true;
+  try { await ensureUserDoc(user); } catch (e) { onErr(e); }
+  ensureProfile(user.uid);
+  checkAdmin();
+  sessionUnsubs.push(onSnapshot(query(collection(db, "friendships"), where("users", "array-contains", user.uid)), (snap) => {
+    friendships = snap.docs.map((d) => ({ id: d.id, ...d.data(SNAP) }));
+    friendships.forEach((f) => f.users.forEach(ensureProfile));
+    scheduleRender();
+  }, onErr));
+  sessionUnsubs.push(onSnapshot(query(collection(db, "chats"), where("members", "array-contains", user.uid)), (snap) => {
+    const prev = new Map(chats.map((c) => [c.id, c]));
+    chats = snap.docs.map((d) => ({ id: d.id, ...d.data(SNAP) }));
+    chats.forEach((c) => c.members.forEach(ensureProfile));
+    if (!firstChats) chats.forEach((c) => notifyIfNew(prev.get(c.id), c));
+    firstChats = false;
+    scheduleRender();
+  }, onErr));
+  sessionUnsubs.push(onSnapshot(query(collection(db, "stories"), where("audience", "array-contains", user.uid), limit(300)), (snap) => {
+    stories = snap.docs.map((d) => ({ id: d.id, ...d.data(SNAP) }));
+    stories.forEach((s) => ensureProfile(s.uid));
+    // tidy up my own expired stories
+    stories.filter((s) => s.uid === user.uid && s.exp < Date.now()).forEach((s) => removeStory(s).catch(() => {}));
+    scheduleRender();
+  }, onErr));
+  sessionUnsubs.push(onSnapshot(query(collection(db, "blocks"), where("by", "==", user.uid)), (snap) => {
+    blocks = snap.docs.map((d) => ({ id: d.id, ...d.data(SNAP) }));
+    blocks.forEach((b) => ensureProfile(b.who));
+    scheduleRender();
+  }, onErr));
+  sessionUnsubs.push(onSnapshot(query(collection(db, "calls"), where("parts", "array-contains", user.uid), limit(80)), (snap) => {
+    callsAll = snap.docs.map((d) => ({ id: d.id, ...d.data(SNAP) }));
+    callsAll.forEach((c) => c.parts.forEach(ensureProfile));
+    callsChanged(); scheduleRender();
+  }, onErr));
+  beat(); beatTimer = setInterval(beat, 30000);
+  tickTimer = setInterval(scheduleRender, 30000);
+  history.replaceState({ v: "main" }, "");
+  show("main"); setTab("Chats"); renderAll();
+}
+function endSession() {
+  started = false; me = null; isAdmin = false; callsAll = [];
+  if (call) endCall("logout", false);
+  sessionUnsubs.forEach((u) => u()); sessionUnsubs = [];
+  profileUnsubs.forEach((u) => u()); profileUnsubs.clear(); profiles.clear();
+  closeChatListeners(); hideStory(); closeSheet();
+  friendships = []; chats = []; stories = []; blocks = []; current = null; currentData = null; subStack = [];
+  clearInterval(beatTimer); clearInterval(tickTimer);
+  $("login").value = ""; $("password").value = ""; $("name").value = "";
+  if (!isLogin) $("toggleBtn").click();
+  $("authError").textContent = "";
+  show("auth");
+}
+function beat() {
+  if (!me || document.hidden) return;
+  updateDoc(doc(db, "users", me.uid), { lastSeen: serverTimestamp() }).catch(() => {});
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { beat(); markRead(); scheduleRender(); } });
+
+/* ---------------- new-message alerts (only while the app is open) ---------------- */
+const muted = () => LS.get("pc_muted", {});
+function notifyIfNew(old, c) {
+  if (!old || !c.lastSender || c.lastSender === me.uid) return;
+  if (ms(c.updatedAt) <= ms(old.updatedAt)) return;
+  if (muted()[c.id]) return;
+  const viewing = current === c.id && !document.hidden && $("chat").classList.contains("active");
+  if (viewing) return;
+  const title = chatTitle(c), body = (c.type === "group" ? pName(c.lastSender) + ": " : "") + c.lastMessage;
+  if (settings.sound) beep();
+  if (document.hidden && settings.notif && "Notification" in window && Notification.permission === "granted") {
+    try { new Notification(title, { body, icon: "icon-192.png" }); } catch {}
+  } else toast(title + ": " + body);
+}
+
+/* ---------------- tabs ---------------- */
+const TABS = ["Chats", "Status", "Friends", "Calls", "Settings"];
+let tab = "Chats";
+function setTab(name) {
+  tab = name;
+  TABS.forEach((t) => $("pane" + t).classList.toggle("active", t === name));
+  document.querySelectorAll(".nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  $("mainTitle").textContent = { Chats: "Pro chat", Status: "স্টোরি", Friends: "বন্ধু", Calls: "কল", Settings: "সেটিংস" }[name];
+  if (name === "Calls") { LS.set("pc_calls_seen", Date.now()); renderCalls(); }
+  callsChanged();
+  const fab = $("fab"); fab.textContent = ""; fab.hidden = !(name === "Chats" || name === "Status");
+  const plus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  fab.innerHTML = plus; fab.append(name === "Chats" ? "নতুন গ্রুপ" : "স্টোরি দিন");
+}
+document.querySelectorAll(".nav button").forEach((b) => b.onclick = () => setTab(b.dataset.tab));
+$("fab").onclick = () => { if (tab === "Chats") openNewGroup(); else addStorySheet(); };
+
+/* ---------------- rendering lists ---------------- */
+function relation(uid) {
+  const f = friendships.find((x) => x.id === fid(me.uid, uid));
+  if (!f) return "none";
+  if (f.status === "accepted") return "friend";
+  return f.requester === me.uid ? "sent" : "received";
+}
+function friendIds() {
+  return friendships.filter((f) => f.status === "accepted").map((f) => f.users.find((u) => u !== me.uid))
+    .sort((a, b) => pName(a).localeCompare(pName(b)));
+}
+function chatTitle(c) {
+  if (c.type === "group") return c.name || "গ্রুপ";
+  return pName(c.members.find((u) => u !== me.uid));
+}
+function isUnread(c) {
+  return c.lastSender && c.lastSender !== me.uid && ms(c.updatedAt) > ms((c.reads || {})[me.uid]);
+}
+function renderAll() {
+  if (!me) return;
+  renderChatList(); renderStatus(); renderFriends(); renderCalls(); renderSettings(); renderChatHeader(); updateMsgMeta();
+}
+
+function renderChatList() {
+  const box = $("chatList"); box.textContent = "";
+  const list = chats.filter((c) => c.lastMessage).sort((a, b) => ms(b.updatedAt) - ms(a.updatedAt));
+  let unread = 0;
+  if (!list.length) {
+    const e = el("div", "empty"); e.append(el("b", null, "এখনো কোনো চ্যাট নেই"), "‘বন্ধু’ ট্যাবে গিয়ে বন্ধু যোগ করুন, তারপর কথা শুরু করুন।");
+    box.appendChild(e);
+  }
+  list.forEach((c) => {
+    const row = el("div", "row tap");
+    const other = c.type === "group" ? null : c.members.find((u) => u !== me.uid);
+    row.appendChild(c.type === "group" ? avatar({ name: c.name }, 50) : avatar(P(other), 50, true));
+    const g = el("div", "grow");
+    g.appendChild(el("div", "name", chatTitle(c)));
+    const who = c.lastSender === me.uid ? "আপনি: " : (c.type === "group" && c.lastSender ? pName(c.lastSender) + ": " : "");
+    g.appendChild(el("div", "small", who + c.lastMessage));
+    row.appendChild(g);
+    const r = el("div"); r.style.textAlign = "right";
+    r.appendChild(el("div", "time", (muted()[c.id] ? "🔕 " : "") + fmtListTime(c.updatedAt)));
+    if (isUnread(c)) { unread++; r.appendChild(el("div", "unread", "●")); }
+    row.appendChild(r);
+    row.onclick = () => openChat(c.id);
+    box.appendChild(row);
+  });
+  const b = $("badgeChats"); b.hidden = !unread; b.textContent = unread;
+}
+
+function personRow(uid, extra) {
+  const row = el("div", "row");
+  row.appendChild(avatar(P(uid), 46, true));
+  const g = el("div", "grow");
+  g.appendChild(el("div", "name", pName(uid)));
+  const st = statusText(P(uid));
+  if (st) g.appendChild(el("div", "small", st));
+  row.appendChild(g);
+  if (extra) row.append(...extra);
+  return row;
+}
+function actionBtn(label, cls, fn) { const b = el("button", "btn sm " + (cls || ""), label); b.onclick = fn; return b; }
+
+function renderFriends() {
+  const rb = $("requestBox"); rb.textContent = "";
+  const incoming = friendships.filter((f) => f.status === "pending" && f.requester !== me.uid);
+  const sent = friendships.filter((f) => f.status === "pending" && f.requester === me.uid);
+  if (incoming.length) {
+    rb.appendChild(el("div", "section", "বন্ধুত্বের অনুরোধ (" + incoming.length + ")"));
+    incoming.forEach((f) => {
+      const uid = f.users.find((u) => u !== me.uid);
+      rb.appendChild(personRow(uid, [
+        actionBtn("গ্রহণ", "", () => updateDoc(doc(db, "friendships", f.id), { status: "accepted" }).catch(onErr)),
+        actionBtn("বাদ", "ghost", () => deleteDoc(doc(db, "friendships", f.id)).catch(onErr))
+      ]));
+    });
+  }
+  if (sent.length) {
+    rb.appendChild(el("div", "section", "পাঠানো অনুরোধ"));
+    sent.forEach((f) => {
+      const uid = f.users.find((u) => u !== me.uid);
+      rb.appendChild(personRow(uid, [actionBtn("বাতিল", "ghost", () => deleteDoc(doc(db, "friendships", f.id)).catch(onErr))]));
+    });
+  }
+  const bf = $("badgeFriends"); bf.hidden = !incoming.length; bf.textContent = incoming.length;
+
+  const fl = $("friendList"); fl.textContent = "";
+  const friends = friendIds();
+  fl.appendChild(el("div", "section", "আমার বন্ধু (" + friends.length + ")"));
+  if (!friends.length) {
+    const e = el("div", "empty"); e.append(el("b", null, "এখনো কোনো বন্ধু নেই"), "বন্ধুর ফোন নম্বর বা ইমেইল লিখে তাকে খুঁজুন, তারপর অনুরোধ পাঠান।");
+    fl.appendChild(e);
+  }
+  friends.forEach((uid) => {
+    const row = personRow(uid, [unfriendBtn(uid)]);
+    row.classList.add("tap");
+    row.onclick = (ev) => { if (ev.target.closest("button")) return; openDirect(uid); };
+    fl.appendChild(row);
+  });
+  renderSearchResults();
+}
+function unfriendBtn(uid) {
+  const b = el("button", "btn sm danger", "ছাড়ুন");
+  let armed = false, t;
+  b.onclick = () => {
+    if (!armed) { armed = true; b.textContent = "নিশ্চিত?"; t = setTimeout(() => { armed = false; b.textContent = "ছাড়ুন"; }, 3000); return; }
+    clearTimeout(t); deleteDoc(doc(db, "friendships", fid(me.uid, uid))).catch(onErr);
+  };
+  return b;
+}
+
+/* search: nobody is listed. Only an exact phone number or e-mail finds a person (like WhatsApp). */
+let searchState = { status: "idle", uid: null };
+$("searchForm").addEventListener("submit", (e) => { e.preventDefault(); runSearch(); });
+$("searchBox").addEventListener("input", () => {
+  if (!$("searchBox").value.trim()) { searchState = { status: "idle", uid: null }; renderSearchResults(); }
+});
+async function runSearch() {
+  const q = $("searchBox").value.trim();
+  if (!q) { searchState = { status: "idle", uid: null }; return renderSearchResults(); }
+  let key = null;
+  if (q.includes("@")) { if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(q)) key = "e_" + q.toLowerCase(); }
+  else { const p = normPhone(q); if (p) key = "p_" + p; }
+  if (!key) { searchState = { status: "invalid", uid: null }; return renderSearchResults(); }
+  searchState = { status: "loading", uid: null }; renderSearchResults();
+  try {
+    const l = await getDoc(doc(db, "lookup", key));
+    if (!l.exists()) searchState = { status: "none", uid: null };
+    else if (l.data().uid === me.uid) searchState = { status: "self", uid: null };
+    else {
+      const uid = l.data().uid, u = await getDoc(doc(db, "users", uid));
+      if (u.exists()) { profiles.set(uid, u.data(SNAP)); ensureProfile(uid); searchState = { status: "found", uid }; }
+      else searchState = { status: "none", uid: null };
+    }
+  } catch (e) { onErr(e); searchState = { status: "idle", uid: null }; }
+  renderSearchResults();
+}
+function renderSearchResults() {
+  const box = $("searchResults"); box.textContent = "";
+  const s = searchState; if (s.status === "idle") return;
+  box.appendChild(el("div", "section", "খোঁজার ফলাফল"));
+  const msg = {
+    loading: "খোঁজা হচ্ছে…",
+    invalid: "সঠিক ফোন নম্বর (যেমন 01712345678) বা ইমেইল লিখুন",
+    none: "এই নম্বর বা ইমেইলে কেউ নেই",
+    self: "এটা আপনার নিজের নম্বর/ইমেইল"
+  }[s.status];
+  if (msg) { box.appendChild(el("div", "empty", msg)); return; }
+  const uid = s.uid;
+  const rel = relation(uid); let btn;
+  if (rel === "none") btn = actionBtn("যোগ করুন", "", async () => {
+    btn.disabled = true;
+    try {
+      await setDoc(doc(db, "friendships", fid(me.uid, uid)), { users: [me.uid, uid].sort(), requester: me.uid, status: "pending", createdAt: serverTimestamp() });
+      toast("অনুরোধ পাঠানো হয়েছে");
+    } catch (e) { onErr(e); btn.disabled = false; toast("অনুরোধ পাঠানো যায়নি (ব্লক থাকতে পারে)"); }
+  });
+  else if (rel === "sent") { btn = actionBtn("পাঠানো হয়েছে", "ghost", () => {}); btn.disabled = true; }
+  else if (rel === "received") btn = actionBtn("গ্রহণ করুন", "", () => updateDoc(doc(db, "friendships", fid(me.uid, uid)), { status: "accepted" }).catch(onErr));
+  else btn = actionBtn("চ্যাট", "ghost", () => openDirect(uid));
+  box.appendChild(personRow(uid, [btn]));
+}
+
+/* ---------------- stories ---------------- */
+const BGS = ["#d6246e", "#7b3fe4", "#1f8a70", "#e07a1f", "#2563eb", "#3a3a4a"];
+function activeStories() { const now = Date.now(); return stories.filter((s) => s.exp > now); }
+function storiesOf(uid) { return activeStories().filter((s) => s.uid === uid).sort((a, b) => ms(a.createdAt) - ms(b.createdAt)); }
+const seenAll = (list) => list.every((s) => s.uid === me.uid || (s.viewers && s.viewers[me.uid]));
+function ringAvatar(uid, size, seen) {
+  const r = el("div", "ring" + (seen ? " seen" : "")); r.appendChild(avatar(P(uid), size)); return r;
+}
+function renderStatus() {
+  const box = $("statusList"); box.textContent = "";
+  const mine = storiesOf(me.uid);
+  const row = el("div", "row tap");
+  row.appendChild(mine.length ? ringAvatar(me.uid, 48, false) : avatar(P(me.uid), 54));
+  const g = el("div", "grow"); g.appendChild(el("div", "name", "আমার স্টোরি"));
+  g.appendChild(el("div", "small", mine.length ? mine.length + "টি · " + fmtListTime(ms(mine[mine.length - 1].createdAt)) : "২৪ ঘণ্টার জন্য স্টোরি দিন"));
+  row.appendChild(g);
+  const add = actionBtn("＋", "ghost", (ev) => { ev.stopPropagation(); addStorySheet(); }); row.appendChild(add);
+  row.onclick = () => { if (mine.length) openStories(me.uid); else addStorySheet(); };
+  box.appendChild(row);
+
+  const byUser = new Map();
+  activeStories().filter((s) => s.uid !== me.uid && relation(s.uid) === "friend").forEach((s) => {
+    if (!byUser.has(s.uid)) byUser.set(s.uid, []); byUser.get(s.uid).push(s);
+  });
+  const groups = [...byUser.entries()].map(([uid, list]) => ({ uid, list: list.sort((a, b) => ms(a.createdAt) - ms(b.createdAt)), seen: seenAll(list) }))
+    .sort((a, b) => (a.seen - b.seen) || (ms(b.list[b.list.length - 1].createdAt) - ms(a.list[a.list.length - 1].createdAt)));
+  box.appendChild(el("div", "section", "বন্ধুদের স্টোরি"));
+  if (!groups.length) { const e = el("div", "empty"); e.append(el("b", null, "এখন কোনো স্টোরি নেই"), "বন্ধুরা স্টোরি দিলে এখানে দেখা যাবে।"); box.appendChild(e); }
+  groups.forEach((gr) => {
+    const r = el("div", "row tap"); r.appendChild(ringAvatar(gr.uid, 48, gr.seen));
+    const gg = el("div", "grow"); gg.appendChild(el("div", "name", pName(gr.uid)));
+    gg.appendChild(el("div", "small", fmtListTime(ms(gr.list[gr.list.length - 1].createdAt)))); r.appendChild(gg);
+    r.onclick = () => openStories(gr.uid, gr.list.findIndex((s) => !(s.viewers && s.viewers[me.uid])));
+    box.appendChild(r);
+  });
+  const unseen = groups.filter((x) => !x.seen).length;
+  const b = $("badgeStatus"); b.hidden = !unseen; b.textContent = unseen;
+}
+const FONTS = [["n", "সাধারণ"], ["b", "মোটা"], ["i", "বাঁকা"]];
+function fontStyle(el_, f) { el_.style.fontWeight = f === "b" ? "800" : "500"; el_.style.fontStyle = f === "i" ? "italic" : "normal"; }
+
+function addStorySheet() {
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", "স্টোরি দিন"));
+    b.append(
+      sheetItem("🖼 গ্যালারি (ছবি বা ভিডিও)", () => pickFile("image/*,video/*", handleStoryFile)),
+      sheetItem("📷 ছবি তুলুন", () => pickFile("image/*", handleStoryFile, "environment")),
+      sheetItem("🎥 ভিডিও করুন", () => pickFile("video/*", handleStoryFile, "environment")),
+      sheetItem("✍ লেখা", () => composeStory({ kind: "text" }))
+    );
+  });
+}
+async function handleStoryFile(f) {
+  try {
+    if ((f.type || "").startsWith("video/")) {
+      toast("ভিডিও প্রস্তুত হচ্ছে…");
+      const blob = await prepVideo(f);
+      composeStory({ kind: "video", blob });
+    } else {
+      const data = await shrink(f, 1000);
+      composeStory({ kind: "image", file: f, image: data });
+    }
+  } catch (e) {
+    onErr(e);
+    toast(e && e.message === "toobig" ? "ভিডিও বেশি বড়, ছোট ভিডিও দিন" : "এই ফাইলটি ব্যবহার করা গেল না");
+  }
+}
+
+/* shrink a video to a small WebM (max 30 s, 480 px, ~300 kbps) so it fits in the free database */
+async function prepVideo(file) {
+  const url = URL.createObjectURL(file);
+  const v = document.createElement("video"); v.src = url; v.playsInline = true; v.preload = "auto";
+  try {
+    await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error("video")); });
+    if (v.duration === Infinity) { v.currentTime = 1e9; await new Promise((r) => { v.ontimeupdate = r; }); v.currentTime = 0; }
+    const dur = Math.min(v.duration || 0, 30);
+    if (!dur || !isFinite(dur)) throw new Error("video");
+    if (file.size <= 500 * 1024 && v.duration <= 30) return file;
+    const sc = Math.min(1, 480 / Math.max(v.videoWidth, v.videoHeight));
+    const cw = Math.max(2, Math.round(v.videoWidth * sc / 2) * 2), ch = Math.max(2, Math.round(v.videoHeight * sc / 2) * 2);
+    const cv = document.createElement("canvas"); cv.width = cw; cv.height = ch; const ctx = cv.getContext("2d");
+    const out = cv.captureStream(20);
+    const ac = new (window.AudioContext || window.webkitAudioContext)(); await ac.resume();
+    const dest = ac.createMediaStreamDestination(); ac.createMediaElementSource(v).connect(dest);
+    dest.stream.getAudioTracks().forEach((t) => out.addTrack(t));
+    const mime = ["video/webm;codecs=vp8,opus", "video/webm"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+    const mr = new MediaRecorder(out, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 280000, audioBitsPerSecond: 32000 });
+    const chunks = []; mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    const finished = new Promise((res) => { mr.onstop = res; });
+    v.currentTime = 0; mr.start(500); await v.play();
+    let lastP = -1;
+    await new Promise((res) => {
+      const tick = () => {
+        ctx.drawImage(v, 0, 0, cw, ch);
+        const p = Math.min(99, Math.floor(v.currentTime / dur * 10) * 10);
+        if (p !== lastP) { lastP = p; toast("ভিডিও ছোট করা হচ্ছে… " + p + "%"); }
+        if (v.ended || v.currentTime >= dur) return res();
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    v.pause(); mr.stop(); await finished; ac.close().catch(() => {});
+    const blob = new Blob(chunks, { type: mr.mimeType || "video/webm" });
+    if (blob.size > 2000 * 1024) throw new Error("toobig");
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
+/* cut a song to a short clip (max 25 s) so it fits in the database */
+async function clipAudio(file, startSec) {
+  const ac = new (window.AudioContext || window.webkitAudioContext)(); await ac.resume();
+  const audio = await ac.decodeAudioData(await file.arrayBuffer());
+  const start = Math.min(Math.max(0, startSec || 0), Math.max(0, audio.duration - 1));
+  const dur = Math.min(25, audio.duration - start);
+  const dest = ac.createMediaStreamDestination(); const src = ac.createBufferSource(); src.buffer = audio; src.connect(dest);
+  const mime = ["audio/webm;codecs=opus", "audio/webm"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+  const mr = new MediaRecorder(dest.stream, { ...(mime ? { mimeType: mime } : {}), audioBitsPerSecond: 40000 });
+  const chunks = []; mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise((res) => { mr.onstop = res; });
+  mr.start(); src.start(0, start, dur); setTimeout(() => { try { mr.stop(); } catch {} }, dur * 1000 + 200);
+  await done; ac.close().catch(() => {});
+  return { data: await toDataURL(new Blob(chunks, { type: mr.mimeType || "audio/webm" })), name: file.name.replace(/\.[^.]+$/, "").slice(0, 40) };
+}
+
+function composeStory(init) {
+  const kind = init.kind, st = { music: null, mode: "all", picked: new Set(), font: "n", bg: BGS[0] };
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", kind === "text" ? "লেখা স্টোরি" : "স্টোরি তৈরি করুন"));
+    if (kind === "image") { const im = document.createElement("img"); im.src = init.image; im.alt = ""; im.style.cssText = "max-height:150px;border-radius:12px;align-self:center"; b.appendChild(im); }
+    if (kind === "video") b.appendChild(el("div", "note", "🎥 ভিডিও প্রস্তুত (" + Math.round(init.blob.size / 1024) + " KB)"));
+    let text;
+    if (kind === "text") {
+      text = document.createElement("textarea"); text.className = "field"; text.placeholder = "কী লিখবেন?"; text.maxLength = 300;
+      text.style.cssText = "background:" + st.bg + ";color:#fff;text-align:center;font-size:1.2em;min-height:110px"; b.appendChild(text);
+      const sw = el("div", "swatches");
+      BGS.forEach((c) => { const s = el("button", c === st.bg ? "on" : ""); s.type = "button"; s.style.background = c; s.setAttribute("aria-label", "রং");
+        s.onclick = () => { st.bg = c; text.style.background = c; sw.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === s)); }; sw.appendChild(s); });
+      b.appendChild(sw);
+      const fr = el("div", "evbtns");
+      FONTS.forEach(([k, label]) => { const x = actionBtn(label, k === st.font ? "" : "ghost", () => { st.font = k; fontStyle(text, k); fr.querySelectorAll("button").forEach((y) => y.classList.toggle("ghost", y !== x)); }); fr.appendChild(x); });
+      b.appendChild(fr);
+    } else { text = el("input", "field"); text.placeholder = "ক্যাপশন (ঐচ্ছিক)"; text.maxLength = 200; b.appendChild(text); }
+
+    if (kind !== "video") {
+      const mrow = el("div", "row"); mrow.style.cssText = "border:1px solid var(--line);border-radius:12px;gap:8px";
+      const label = el("div", "grow", "🎵 গান যোগ করুন (ঐচ্ছিক)"); label.style.fontSize = ".92em";
+      const startIn = el("input", "field"); startIn.type = "number"; startIn.min = 0; startIn.placeholder = "শুরু (সেকেন্ড)"; startIn.style.width = "96px"; startIn.title = "গান কত সেকেন্ড থেকে শুরু হবে";
+      const pick = actionBtn("বাছুন", "ghost", () => pickFile("audio/*", async (f) => {
+        label.textContent = "⏳ গান প্রস্তুত হচ্ছে…"; pick.disabled = true;
+        try { st.music = await clipAudio(f, +startIn.value || 0); label.textContent = "🎵 " + st.music.name; pick.textContent = "বদলান"; }
+        catch (e) { onErr(e); label.textContent = "🎵 গান যোগ করুন (ঐচ্ছিক)"; toast("এই গানটি ব্যবহার করা গেল না"); }
+        pick.disabled = false;
+      }));
+      mrow.append(label, startIn, pick); b.appendChild(mrow);
+      b.appendChild(el("div", "note", "গান আপনার ফোনের ফাইল থেকে নিতে হয়, সর্বোচ্চ ২৫ সেকেন্ডের অংশ থাকবে। যে গানের অধিকার আপনার আছে সেটাই দিন।"));
+    }
+
+    const sel = document.createElement("select"); sel.className = "field";
+    const n = friendIds().length;
+    [["all", "👥 সব বন্ধু দেখবে (" + n + " জন)"], ["some", "🔒 শুধু বেছে নেওয়া বন্ধুরা"]].forEach(([k, l]) => { const o = document.createElement("option"); o.value = k; o.textContent = l; sel.appendChild(o); });
+    const list = el("div"); list.hidden = true; list.style.cssText = "max-height:170px;overflow-y:auto";
+    friendIds().forEach((uid) => {
+      const row = el("label", "row tap"); row.appendChild(avatar(P(uid), 34)); const g = el("div", "grow", pName(uid)); row.appendChild(g);
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.className = "check"; cb.onchange = () => { if (cb.checked) st.picked.add(uid); else st.picked.delete(uid); }; row.appendChild(cb); list.appendChild(row);
+    });
+    sel.onchange = () => { st.mode = sel.value; list.hidden = st.mode !== "some"; };
+    b.append(sel, list);
+
+    const err = el("div", "error"); const go = el("button", "btn", "পোস্ট করুন"); go.type = "button";
+    go.onclick = async () => {
+      err.textContent = "";
+      const t = text.value.trim();
+      if (kind === "text" && !t) return err.textContent = "কিছু লিখুন";
+      if (st.mode === "some" && !st.picked.size) return err.textContent = "কমপক্ষে একজন বন্ধু বাছুন";
+      go.disabled = true; go.textContent = "পোস্ট হচ্ছে…";
+      try {
+        const aud = [me.uid, ...(st.mode === "all" ? friendIds() : [...st.picked])].slice(0, 400);
+        await postStory(kind, init, t, st, aud);
+        closeSheet(); toast("স্টোরি দেওয়া হয়েছে (২৪ ঘণ্টা থাকবে)");
+      } catch (e) { onErr(e); err.textContent = e && e.message === "toobig" ? "ছবি ও গান মিলে বড় হয়ে গেছে, গান ছাড়া বা ছোট ছবি দিন" : "পোস্ট করা যায়নি"; go.disabled = false; go.textContent = "পোস্ট করুন"; }
+    };
+    b.append(err, go);
+  });
+}
+async function postStory(kind, init, text, st, audience) {
+  const base = { uid: me.uid, kind, image: "", text: "", bg: "", font: "n", createdAt: serverTimestamp(), exp: Date.now() + 86400000, audience, viewers: {}, music: "", musicName: "", chunks: 0, vtype: "" };
+  if (kind === "text") return void await addDoc(collection(db, "stories"), { ...base, text, bg: st.bg, font: st.font });
+  if (kind === "image") {
+    let image = init.image, music = st.music ? st.music.data : "";
+    if (music && image.length + music.length > 940000) image = await shrink(init.file, 640);
+    if (image.length + music.length > 940000) throw new Error("toobig");
+    return void await addDoc(collection(db, "stories"), { ...base, image, text, music, musicName: st.music ? st.music.name : "" });
+  }
+  // video: stored in pieces, visible to friends only after every piece is uploaded
+  const data = await toDataURL(init.blob), size = 690000, parts = Math.ceil(data.length / size);
+  if (parts > 4) throw new Error("toobig");
+  const ref = await addDoc(collection(db, "stories"), { ...base, text, chunks: parts, vtype: init.blob.type || "video/webm", audience: [me.uid] });
+  for (let i = 0; i < parts; i++) await setDoc(doc(db, "stories", ref.id, "chunks", String(i)), { i, data: data.slice(i * size, (i + 1) * size) });
+  await updateDoc(ref, { audience });
+}
+async function removeStory(s) {
+  if (s.kind === "video" && s.chunks) await Promise.all(Array.from({ length: s.chunks }, (_, i) => deleteDoc(doc(db, "stories", s.id, "chunks", String(i))).catch(() => {})));
+  await deleteDoc(doc(db, "stories", s.id));
+}
+const vidCache = new Map();
+async function loadVideoUrl(s) {
+  if (vidCache.has(s.id)) return vidCache.get(s.id);
+  const snaps = await Promise.all(Array.from({ length: s.chunks }, (_, i) => getDoc(doc(db, "stories", s.id, "chunks", String(i)))));
+  if (snaps.some((x) => !x.exists())) throw new Error("incomplete");
+  const blob = await (await fetch(snaps.map((x) => x.data().data).join(""))).blob();
+  const u = URL.createObjectURL(new Blob([blob], { type: s.vtype || "video/webm" }));
+  vidCache.set(s.id, u); return u;
+}
+
+/* story viewer: tap right/left = next/previous, hold = pause, own stories show who viewed */
+let sv = null;
+function openStories(uid, start) {
+  const list = storiesOf(uid); if (!list.length) return;
+  sv = { uid, list, i: Math.max(0, start || 0), t: null, rem: 5000, t0: 0, vid: null, audio: null, down: 0 };
+  history.pushState({ v: "story" }, ""); $("story").hidden = false; showStory();
+}
+function stopMedia() {
+  if (!sv) return;
+  clearTimeout(sv.t); sv.t = null;
+  if (sv.vid) { sv.vid.pause(); sv.vid = null; }
+  if (sv.audio) { sv.audio.pause(); sv.audio = null; }
+}
+function pauseStory() {
+  if (!sv) return;
+  if (sv.t) { clearTimeout(sv.t); sv.t = null; sv.rem = Math.max(500, sv.rem - (Date.now() - sv.t0)); }
+  if (sv.vid) sv.vid.pause(); if (sv.audio) sv.audio.pause();
+}
+function resumeStory() {
+  if (!sv) return; const s = sv.list[sv.i];
+  if (s && s.kind !== "video" && !sv.t) { sv.t0 = Date.now(); sv.t = setTimeout(nextStory, sv.rem); }
+  if (sv.vid) sv.vid.play().catch(() => {}); if (sv.audio) sv.audio.play().catch(() => {});
+}
+function showStory() {
+  if (!sv) return; stopMedia();
+  const s = sv.list[sv.i]; if (!s) return history.back();
+  const own = s.uid === me.uid;
+  const bars = $("storyBars"); bars.textContent = "";
+  sv.list.forEach((_, k) => bars.appendChild(el("i", k <= sv.i ? "done" : "")));
+  const head = $("storyHead"); head.textContent = "";
+  const x = el("button", "icon-btn", "✕"); x.onclick = () => history.back(); x.setAttribute("aria-label", "বন্ধ");
+  const g = el("div", "grow"); g.append(el("b", null, own ? "আমার স্টোরি" : pName(s.uid)), el("br"), el("small", null, fmtListTime(ms(s.createdAt)) + (s.music ? "  ·  🎵 " + s.musicName : "")));
+  head.append(avatar(P(s.uid), 38), g, x);
+  const body = $("storyBody"); body.textContent = "";
+  if (s.kind === "image") {
+    const img = document.createElement("img"); img.src = s.image; img.alt = "স্টোরি"; body.appendChild(img);
+  } else if (s.kind === "video") {
+    const wait = el("div", "note", "⏳ ভিডিও লোড হচ্ছে…"); wait.style.color = "#fff"; body.appendChild(wait);
+    loadVideoUrl(s).then((u) => {
+      if (!sv || sv.list[sv.i] !== s) return;
+      wait.remove(); const vd = document.createElement("video"); vd.src = u; vd.autoplay = true; vd.playsInline = true; vd.onended = nextStory;
+      body.insertBefore(vd, body.firstChild); sv.vid = vd; vd.play().catch(() => {});
+    }).catch(() => { wait.textContent = "ভিডিওটি এখনো আপলোড হচ্ছে বা পাওয়া যায়নি"; });
+  } else { const d = el("div", "stext", s.text); d.style.background = s.bg || BGS[0]; fontStyle(d, s.font); body.appendChild(d); }
+  if (s.kind !== "text" && s.text) body.appendChild(el("div", "cap", s.text));
+  if (s.music) { const a = new Audio(s.music); a.loop = true; sv.audio = a; a.play().catch(() => {}); }
+  const prev = el("button", "zone"); prev.style.left = "0"; prev.setAttribute("aria-label", "আগেরটি"); prev.onclick = () => { if (sv.held) return; if (sv.i > 0) { sv.i--; showStory(); } };
+  const next = el("button", "zone"); next.style.right = "0"; next.setAttribute("aria-label", "পরেরটি"); next.onclick = () => { if (sv.held) return; nextStory(); };
+  body.append(prev, next);
+  body.onpointerdown = () => { sv.down = Date.now(); sv.held = false; pauseStory(); };
+  const rel = () => { if (!sv) return; sv.held = Date.now() - sv.down > 350; resumeStory(); };
+  body.onpointerup = rel; body.onpointercancel = rel;
+  const foot = $("storyFoot"); foot.textContent = "";
+  if (own) {
+    const n = Object.keys(s.viewers || {}).length;
+    foot.append(actionBtn("👁 " + n + " জন দেখেছে", "", () => { pauseStory(); showViewers(s); }),
+      actionBtn("🗑 মুছুন", "", async () => { stopMedia(); try { await removeStory(s); } catch (e) { onErr(e); } sv.list.splice(sv.i, 1); if (!sv.list.length) history.back(); else { sv.i = Math.min(sv.i, sv.list.length - 1); showStory(); } }));
+  } else {
+    if (!(s.viewers && s.viewers[me.uid])) {
+      updateDoc(doc(db, "stories", s.id), { ["viewers." + me.uid]: true }).catch(() => {});
+      s.viewers = { ...(s.viewers || {}), [me.uid]: true };
+    }
+    const inp = el("input", "field"); inp.placeholder = "রিপ্লাই দিন…"; inp.maxLength = 300; inp.style.flex = "1";
+    inp.onfocus = pauseStory; inp.onblur = () => setTimeout(resumeStory, 150);
+    const send = actionBtn("➤", "", async () => { const t = inp.value.trim(); if (!t) return; inp.value = ""; inp.blur(); await storyReply(s, t); });
+    const heart = actionBtn("❤️", "ghost", () => storyReply(s, "❤️"));
+    inp.onkeydown = (e) => { if (e.key === "Enter") send.click(); };
+    foot.append(inp, send, heart); foot.style.alignItems = "center";
+  }
+  if (s.kind !== "video") { sv.rem = s.music ? 15000 : 5000; sv.t0 = Date.now(); sv.t = setTimeout(nextStory, sv.rem); }
+}
+async function storyReply(s, text) {
+  try {
+    const id = await ensureDirect(s.uid);
+    await sendRaw(id, { text, kind: "text", reply: { id: s.id, who: "স্টোরি", text: (s.text || (s.kind === "video" ? "🎥 ভিডিও" : "📷 স্টোরি")).slice(0, 80) } }, text.slice(0, 80));
+    toast("রিপ্লাই পাঠানো হয়েছে");
+  } catch (e) { onErr(e); }
+}
+function nextStory() { if (!sv) return; if (sv.i < sv.list.length - 1) { sv.i++; showStory(); } else history.back(); }
+function hideStory() { if (sv) stopMedia(); sv = null; $("story").hidden = true; }
+function showViewers(s) {
+  const ids = Object.keys(s.viewers || {});
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", "যারা দেখেছে (" + ids.length + ")"));
+    if (!ids.length) b.appendChild(el("div", "note", "এখনো কেউ দেখেনি"));
+    ids.forEach((u) => { ensureProfile(u); b.appendChild(personRow(u)); });
+  });
+}
+
+/* ---------------- settings ---------------- */
+function srow(icon, title, sub, fn) {
+  const r = el("div", "row tap"); r.appendChild(el("div", "rico", icon));
+  const g = el("div", "grow"); g.appendChild(el("div", "name", title)); if (sub) g.appendChild(el("div", "small", sub)); r.appendChild(g);
+  r.onclick = fn; return r;
+}
+function toggleRow(icon, title, sub, on, fn) {
+  const r = el("label", "row tap"); r.appendChild(el("div", "rico", icon));
+  const g = el("div", "grow"); g.appendChild(el("div", "name", title)); if (sub) g.appendChild(el("div", "small", sub)); r.appendChild(g);
+  const cb = document.createElement("input"); cb.type = "checkbox"; cb.className = "check"; cb.checked = !!on;
+  cb.onchange = () => fn(cb.checked); r.appendChild(cb); return r;
+}
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; scheduleRender(); });
+
+function renderSettings() {
+  const box = $("settingsList"); box.textContent = "";
+  const p = P(me.uid) || { name: me.displayName };
+  const top = el("div", "row tap"); top.style.padding = "16px";
+  top.appendChild(avatar(p, 64)); const g = el("div", "grow");
+  g.appendChild(el("div", "name", p.name || "আমি")); g.appendChild(el("div", "small", p.about || "আপনার About লিখুন"));
+  top.appendChild(g); top.onclick = () => pushSub("প্রোফাইল", subProfile); box.appendChild(top);
+  [
+    ["👤", "অ্যাকাউন্ট", "নম্বর, পাসওয়ার্ড", () => pushSub("অ্যাকাউন্ট", subAccount)],
+    ["🔒", "প্রাইভেসি", "শেষ দেখা, রিড রিসিপ্ট, ব্লক", () => pushSub("প্রাইভেসি", subPrivacy)],
+    ["📢", "ব্রডকাস্ট", "অনেক বন্ধুকে একসাথে মেসেজ", () => pushSub("ব্রডকাস্ট", subBroadcast)],
+    ["🔔", "নোটিফিকেশন", "শব্দ ও সতর্কবার্তা", () => pushSub("নোটিফিকেশন", subNotif)],
+    ["🎨", "অ্যাপিয়ারেন্স", "থিম ও চ্যাট ওয়ালপেপার", () => pushSub("অ্যাপিয়ারেন্স", subAppearance)],
+    ["💾", "স্টোরেজ ও ডেটা", "ছবির মান", () => pushSub("স্টোরেজ ও ডেটা", subStorage)],
+    ["♿", "অ্যাক্সেসিবিলিটি", "লেখার আকার", () => pushSub("অ্যাক্সেসিবিলিটি", subAccess)],
+    ["🌐", "অ্যাপের ভাষা", "বাংলা", () => pushSub("অ্যাপের ভাষা", subLang)],
+    ["🛡", "অ্যাপ পারমিশন", "মাইক, ক্যামেরা, লোকেশন", () => pushSub("অ্যাপ পারমিশন", subPerms)],
+    ["❓", "সাহায্য", "প্রশ্ন ও উত্তর", () => pushSub("সাহায্য", subHelp)],
+    ["💌", "বন্ধুকে ইনভাইট করুন", "অ্যাপের লিঙ্ক পাঠান", inviteFriend]
+  ].forEach((a) => box.appendChild(srow(a[0], a[1], a[2], a[3])));
+  if (isAdmin) box.appendChild(srow("👑", "Admin Panel", "সব রেজিস্টার্ড ইউজার", () => pushSub("Admin Panel", subAdmin)));
+  if (deferredInstall) box.appendChild(srow("📲", "হোম স্ক্রিনে ইনস্টল করুন", "অ্যাপের মতো খুলুন", async () => { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; scheduleRender(); }));
+  const out = srow("⎋", "লগআউট", "", () => signOut(auth)); out.querySelector(".name").style.color = "var(--danger)"; box.appendChild(out);
+}
+async function inviteFriend() {
+  const url = location.origin + location.pathname.replace(/index\.html$/, "");
+  const text = "Pro chat-এ আমার সাথে চ্যাট করুন: " + url;
+  try { if (navigator.share) { await navigator.share({ title: "Pro chat", text, url }); return; } } catch { return; }
+  try { await navigator.clipboard.writeText(text); toast("লিঙ্ক কপি হয়েছে, বন্ধুকে পাঠান"); } catch { toast(url); }
+}
+
+/* sub-page navigation */
+function pushSub(title, fn) {
+  subStack.push({ title, fn }); history.pushState({ v: "sub", d: subStack.length }, ""); show("sub"); renderSub();
+}
+function renderSub() {
+  const top = subStack[subStack.length - 1]; if (!top) return;
+  $("subTitle").textContent = top.title; const b = $("subBody"); b.textContent = ""; top.fn(b);
+}
+$("subBack").onclick = () => history.back();
+
+function subProfile(b) {
+  const p = P(me.uid) || {};
+  const wrap = el("div", "prof"); wrap.appendChild(avatar(p, 112));
+  const box = el("div", "box");
+  const photoBtn = el("button", "btn ghost", "ছবি বদলান"); const fi = document.createElement("input"); fi.type = "file"; fi.accept = "image/*"; fi.hidden = true;
+  photoBtn.onclick = () => fi.click();
+  fi.onchange = async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    try { const photo = await squarePhoto(f, 160); await updateDoc(doc(db, "users", me.uid), { photo }); toast("ছবি বদলানো হয়েছে"); setTimeout(renderSub, 300); }
+    catch (er) { onErr(er); toast("ছবি দেওয়া গেল না"); }
+  };
+  const name = el("input", "field"); name.value = p.name || ""; name.placeholder = "আপনার নাম"; name.maxLength = 40;
+  const about = el("input", "field"); about.value = p.about || ""; about.placeholder = "About (যেমন: ব্যস্ত আছি)"; about.maxLength = 80;
+  const save = el("button", "btn", "সংরক্ষণ");
+  save.onclick = async () => {
+    const n = name.value.trim(); if (!n) return toast("নাম লিখুন");
+    try { await updateProfile(me, { displayName: n }); await updateDoc(doc(db, "users", me.uid), { name: n, about: about.value.trim() }); toast("সংরক্ষণ হয়েছে"); }
+    catch (er) { onErr(er); }
+  };
+  box.append(photoBtn, fi, name, about, save); wrap.appendChild(box); b.appendChild(wrap);
+}
+function subAccount(b) {
+  const p = P(me.uid) || {};
+  b.appendChild(el("div", "note", p.phone ? "ফোন: +" + p.phone : (p.email ? "ইমেইল: " + p.email : "")));
+  const box = el("div", "pad");
+  box.appendChild(el("div", "section", "পাসওয়ার্ড বদলান"));
+  const cur = el("input", "field"); cur.type = "password"; cur.placeholder = "বর্তমান পাসওয়ার্ড"; cur.autocomplete = "current-password";
+  const nw = el("input", "field"); nw.type = "password"; nw.placeholder = "নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)"; nw.autocomplete = "new-password";
+  const err = el("div", "error"); const go = el("button", "btn", "পাসওয়ার্ড বদলান");
+  go.onclick = async () => {
+    err.textContent = ""; if (!cur.value || nw.value.length < 6) return err.textContent = "সব ঘর ঠিকমতো পূরণ করুন";
+    go.disabled = true;
+    try { await reauthenticateWithCredential(me, EmailAuthProvider.credential(me.email, cur.value)); await updatePassword(me, nw.value); cur.value = nw.value = ""; toast("পাসওয়ার্ড বদলানো হয়েছে"); }
+    catch (e) { err.textContent = authError(e.code || e.message); }
+    go.disabled = false;
+  };
+  box.append(cur, nw, err, go); b.appendChild(box);
+}
+function subPrivacy(b) {
+  const p = P(me.uid) || {};
+  b.appendChild(toggleRow("🕘", "শেষ দেখা ও অনলাইন লুকান", "অন্যরা আপনার অনলাইন অবস্থা দেখবে না", p.hideSeen, (v) => updateDoc(doc(db, "users", me.uid), { hideSeen: v }).catch(onErr)));
+  b.appendChild(toggleRow("✓✓", "রিড রিসিপ্ট বন্ধ", "বন্ধ করলে অন্যের ‘দেখেছে’ চিহ্নও আপনি দেখবেন না", p.noReceipts, (v) => updateDoc(doc(db, "users", me.uid), { noReceipts: v }).catch(onErr)));
+  b.appendChild(srow("🚫", "ব্লক করা", blocks.length + " জন", () => pushSub("ব্লক করা", subBlocked)));
+  b.appendChild(el("div", "note", "এই অ্যাপে কেউ আপনাকে নাম দিয়ে খুঁজতে পারে না। শুধু আপনার ঠিক নম্বর বা ইমেইল জানা থাকলে পারে, আর আপনি অনুরোধ গ্রহণ না করলে চ্যাট শুরু হয় না।"));
+}
+function subBlocked(b) {
+  if (!blocks.length) b.appendChild(el("div", "empty", "কাউকে ব্লক করা নেই"));
+  blocks.forEach((bl) => b.appendChild(personRow(bl.who, [actionBtn("আনব্লক", "ghost", async () => { try { await deleteDoc(doc(db, "blocks", bl.id)); toast("আনব্লক করা হয়েছে"); setTimeout(renderSub, 300); } catch (e) { onErr(e); } })])));
+}
+function subBroadcast(b) {
+  const friends = friendIds();
+  const pad = el("div", "pad"); const msg = el("textarea", "field"); msg.placeholder = "মেসেজ লিখুন (বেছে নেওয়া সবাইকে আলাদা আলাদা চ্যাটে যাবে)"; msg.maxLength = 1000;
+  pad.appendChild(msg); b.appendChild(pad); b.appendChild(el("div", "section", "কাদের পাঠাবেন"));
+  if (!friends.length) b.appendChild(el("div", "empty", "আগে বন্ধু যোগ করুন"));
+  const boxes = [];
+  friends.forEach((uid) => {
+    const row = el("label", "row tap"); row.appendChild(avatar(P(uid), 42)); const g = el("div", "grow"); g.appendChild(el("div", "name", pName(uid))); row.appendChild(g);
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.className = "check"; cb.value = uid; row.appendChild(cb); boxes.push(cb); b.appendChild(row);
+  });
+  const p2 = el("div", "pad"); const go = el("button", "btn", "পাঠান"); p2.appendChild(go); b.appendChild(p2);
+  go.onclick = async () => {
+    const text = msg.value.trim(), ids = boxes.filter((c) => c.checked).map((c) => c.value);
+    if (!text) return toast("মেসেজ লিখুন"); if (!ids.length) return toast("কমপক্ষে একজনকে বেছে নিন");
+    go.disabled = true; let n = 0;
+    for (const uid of ids) { try { const id = await ensureDirect(uid); await sendRaw(id, { text }, text.slice(0, 80)); n++; } catch (e) { onErr(e); } }
+    go.disabled = false; toast(n + " জনকে পাঠানো হয়েছে"); if (n) msg.value = "";
+  };
+}
+function subNotif(b) {
+  b.appendChild(toggleRow("🔊", "মেসেজের শব্দ", "অ্যাপ খোলা থাকলে নতুন মেসেজে শব্দ হবে", settings.sound, (v) => { settings.sound = v; saveSettings(); }));
+  b.appendChild(toggleRow("🔔", "ব্রাউজার নোটিফিকেশন", "অ্যাপ ব্যাকগ্রাউন্ডে (খোলা) থাকলে সতর্কবার্তা", settings.notif, async (v) => {
+    if (v && "Notification" in window) { const r = await Notification.requestPermission(); v = r === "granted"; if (!v) toast("অনুমতি দেওয়া হয়নি"); }
+    else if (v) { toast("এই ব্রাউজারে সম্ভব নয়"); v = false; }
+    settings.notif = v; saveSettings(); renderSub();
+  }));
+  b.appendChild(el("div", "note", "দ্রষ্টব্য: অ্যাপ সম্পূর্ণ বন্ধ থাকলে নোটিফিকেশন আসবে না, এর জন্য পেইড সার্ভার লাগে। চ্যাট বিশেষে মিউট করতে চ্যাটের ⋮ মেনু ব্যবহার করুন।"));
+}
+const WALLS = [["", "ডিফল্ট"], ["#fdeef4", "গোলাপি"], ["#efeaff", "ল্যাভেন্ডার"], ["#e6f6ef", "পুদিনা"], ["#fff6e0", "ক্রিম"], ["#2a1a24", "গাঢ়"]];
+function subAppearance(b) {
+  b.appendChild(el("div", "section", "থিম"));
+  [["auto", "ফোনের সেটিং অনুযায়ী"], ["light", "লাইট"], ["dark", "ডার্ক"]].forEach(([k, label]) => {
+    const r = el("label", "row tap"); const g = el("div", "grow"); g.appendChild(el("div", "name", label)); r.appendChild(g);
+    const rd = document.createElement("input"); rd.type = "radio"; rd.name = "theme"; rd.className = "check"; rd.checked = settings.theme === k;
+    rd.onchange = () => { settings.theme = k; saveSettings(); }; r.appendChild(rd); b.appendChild(r);
+  });
+  b.appendChild(el("div", "section", "চ্যাট ওয়ালপেপার"));
+  const sw = el("div", "swatches"); sw.style.padding = "8px 16px";
+  WALLS.forEach(([c, label]) => {
+    const s = el("button", settings.wall === c ? "on" : ""); s.type = "button"; s.title = label; s.setAttribute("aria-label", label);
+    s.style.background = c || "linear-gradient(135deg,#fdeef4,#ffd9e8)"; s.style.border = "3px solid " + (settings.wall === c ? "var(--pink)" : "var(--line)");
+    s.onclick = () => { settings.wall = c; saveSettings(); renderSub(); }; sw.appendChild(s);
+  });
+  b.appendChild(sw);
+}
+function subStorage(b) {
+  b.appendChild(el("div", "section", "ছবির মান"));
+  [["good", "ভালো মান (বেশি ডেটা)"], ["small", "ডেটা সেভার (ছোট ছবি)"]].forEach(([k, label]) => {
+    const r = el("label", "row tap"); const g = el("div", "grow"); g.appendChild(el("div", "name", label)); r.appendChild(g);
+    const rd = document.createElement("input"); rd.type = "radio"; rd.name = "q"; rd.className = "check"; rd.checked = settings.imgq === k;
+    rd.onchange = () => { settings.imgq = k; saveSettings(); }; r.appendChild(rd); b.appendChild(r);
+  });
+  b.appendChild(el("div", "note", "সব ছবি, ভয়েস ও ফাইল অনলাইনে জমা থাকে, ফোনের স্টোরেজ নেয় না। ছবি ও ডকুমেন্টের আকার সীমিত (ছবি স্বয়ংক্রিয়ভাবে ছোট হয়, ডকুমেন্ট সর্বোচ্চ প্রায় ৬০০ KB)।"));
+}
+function subAccess(b) {
+  const pad = el("div", "pad"); pad.appendChild(el("div", "name", "লেখার আকার: " + settings.fs));
+  const r = document.createElement("input"); r.type = "range"; r.min = 14; r.max = 22; r.step = 1; r.value = settings.fs; r.style.width = "100%"; r.style.accentColor = "var(--pink)";
+  r.oninput = () => { settings.fs = +r.value; saveSettings(); pad.firstChild.textContent = "লেখার আকার: " + settings.fs; };
+  pad.appendChild(r); pad.appendChild(el("div", null, "এটা একটা নমুনা লেখা। আপনার সুবিধামতো আকার বেছে নিন।")); b.appendChild(pad);
+}
+function subLang(b) {
+  const r = el("div", "row"); r.appendChild(el("div", "rico", "✓")); const g = el("div", "grow"); g.appendChild(el("div", "name", "বাংলা")); r.appendChild(g); b.appendChild(r);
+  const r2 = el("div", "row"); r2.style.opacity = ".55"; r2.appendChild(el("div", "rico", "")); const g2 = el("div", "grow"); g2.appendChild(el("div", "name", "English")); g2.appendChild(el("div", "small", "শীঘ্রই আসছে")); r2.appendChild(g2); b.appendChild(r2);
+}
+const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\/|MicroMessenger|Snapchat|; wv\)/i.test(navigator.userAgent || "");
+function subPerms(b) {
+  if (IN_APP_BROWSER) b.appendChild(el("div", "note", "⚠ আপনি সম্ভবত অন্য কোনো অ্যাপের ভেতরের ব্রাউজারে আছেন। এখানে মাইক/ক্যামেরার অনুমতি কাজ করে না। ওপরের ⋮ মেনু থেকে “Chrome-এ খুলুন” চাপুন।"));
+  const items = [
+    ["🎙", "মাইক্রোফোন", "microphone", async () => { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach((t) => t.stop()); }],
+    ["📷", "ক্যামেরা", "camera", async () => { const s = await navigator.mediaDevices.getUserMedia({ video: true }); s.getTracks().forEach((t) => t.stop()); }],
+    ["📍", "লোকেশন", "geolocation", () => new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 10000 }))],
+    ["🔔", "নোটিফিকেশন", "notifications", async () => { const r = await Notification.requestPermission(); if (r !== "granted") throw new Error("denied"); }]
+  ];
+  const label = { granted: "✅ দেওয়া আছে", denied: "❌ বন্ধ আছে", prompt: "জিজ্ঞেস করবে" };
+  items.forEach(([ic, name, perm, ask]) => {
+    const r = el("div", "row"); r.appendChild(el("div", "rico", ic));
+    const g = el("div", "grow"); g.appendChild(el("div", "name", name)); const st = el("div", "small", "…"); g.appendChild(st); r.appendChild(g);
+    try { navigator.permissions.query({ name: perm }).then((q) => { st.textContent = label[q.state] || q.state; q.onchange = () => { st.textContent = label[q.state] || q.state; }; }).catch(() => { st.textContent = "অবস্থা জানা যায়নি"; }); }
+    catch { st.textContent = "অবস্থা জানা যায়নি"; }
+    r.appendChild(actionBtn("অনুমতি দিন", "ghost", async () => {
+      try { await ask(); toast("অনুমতি পাওয়া গেছে"); st.textContent = "✅ কাজ করছে"; return; } catch (e) { st.textContent = "❌ " + mediaErrText(e); st.style.whiteSpace = "normal"; st.style.color = "var(--danger)"; return; }
+      setTimeout(renderSub, 400);
+    }));
+    b.appendChild(r);
+  });
+  const pad = el("div", "pad faq");
+  [["“❌ বন্ধ আছে” দেখালে", "Chrome-এর ঠিকানার ঘরের পাশের 🔒 বা ⓘ চিহ্ন চাপুন → অনুমতি (Permissions) → মাইক্রোফোন/ক্যামেরা → অনুমতি দিন (Allow)। তারপর পেজ রিফ্রেশ করুন।"],
+   ["তবুও না হলে", "ফোনের Settings → Apps → Chrome → Permissions → Microphone/Camera/Location → Allow।"],
+   ["ভয়েস পাঠানোর বিকল্প", "মাইক্রোফোন একদমই না চললে মাইক বোতাম চাপলে আসা “ফোনের রেকর্ডার দিয়ে ভয়েস পাঠান” ব্যবহার করুন। এতে ব্রাউজারের অনুমতি লাগে না।"],
+   ["লিংক কোথায় খুলছেন?", "Messenger/Facebook/WhatsApp-এর ভেতর থেকে লিংক খুললে অনুমতি কাজ করে না। লিংক কপি করে সরাসরি Chrome-এ খুলুন, বা হোম স্ক্রিনে অ্যাপ ইনস্টল করুন।"]
+  ].forEach(([q, a]) => { const d = el("div"); d.append(el("b", null, q), el("p", null, a)); pad.appendChild(d); });
+  b.appendChild(pad);
+}
+
+/* ---- Admin: the first account that signs in with the owner's e-mail becomes the admin (enforced by the database rules) ---- */
+async function checkAdmin() {
+  try {
+    const ref = doc(db, "meta", "admin"), s = await getDoc(ref);
+    if (s.exists()) isAdmin = s.data().uid === me.uid;
+    else { try { await setDoc(ref, { uid: me.uid }); isAdmin = true; } catch { isAdmin = false; } }
+  } catch { isAdmin = false; }
+  scheduleRender();
+}
+function subAdmin(b) {
+  if (!isAdmin) { b.appendChild(el("div", "empty", "অনুমতি নেই")); return; }
+  const top = el("div", "pad"); const sr = el("input", "field"); sr.type = "search"; sr.placeholder = "নাম, ইমেইল বা ফোন দিয়ে খুঁজুন";
+  const rf = el("button", "btn", "🔄 রিফ্রেশ"); top.append(sr, rf); b.appendChild(top);
+  const stats = el("div", "note", "লোড হচ্ছে…"); b.appendChild(stats);
+  const list = el("div"); b.appendChild(list);
+  let users = [];
+  const online = (u) => u.lastSeen && Date.now() - ms(u.lastSeen) < ONLINE_MS;
+  const when = (t) => { try { return new Date(ms(t)).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" }); } catch { return new Date(ms(t)).toLocaleString(); } };
+  const paint = () => {
+    list.textContent = ""; const q = sr.value.trim().toLowerCase();
+    const arr = users.filter((u) => !q || [u.name, u.email, u.phone].some((x) => (x || "").toLowerCase().includes(q))).sort((a, c) => ms(c.createdAt) - ms(a.createdAt));
+    stats.textContent = "👤 মোট: " + users.length + "  ·  🟢 অনলাইন: " + users.filter(online).length + "  ·  দেখাচ্ছে: " + arr.length;
+    arr.forEach((u) => {
+      const r = el("div", "row"); r.appendChild(avatar(u, 44));
+      const g = el("div", "grow"); g.style.minWidth = "0";
+      g.appendChild(el("div", "name", u.name || "নামহীন"));
+      const line = (t) => { const d = el("div", "small", t); d.style.whiteSpace = "normal"; g.appendChild(d); };
+      line("📧 " + (u.email || "—")); line("📱 " + (u.phone ? "+" + u.phone : "—"));
+      line(online(u) ? "🟢 অনলাইন" : "⚪ শেষ দেখা: " + (u.lastSeen ? when(u.lastSeen) : "—"));
+      line("📅 অ্যাকাউন্ট: " + (u.createdAt ? when(u.createdAt) : "—"));
+      r.appendChild(g); list.appendChild(r);
+    });
+    if (!arr.length) list.appendChild(el("div", "empty", "কেউ পাওয়া যায়নি"));
+  };
+  const load = async () => {
+    stats.textContent = "লোড হচ্ছে…";
+    try { const snap = await getDocs(query(collection(db, "users"), limit(500))); users = snap.docs.map((d) => ({ id: d.id, ...d.data(SNAP) })); paint(); }
+    catch (e) { onErr(e); stats.textContent = "লোড করা যায়নি (Rules নতুনটা Publish করা হয়েছে কি?)"; }
+  };
+  sr.addEventListener("input", paint); rf.onclick = load; load();
+}
+
+function subHelp(b) {
+  const pad = el("div", "pad faq");
+  [["বন্ধু কীভাবে যোগ করব?", "‘বন্ধু’ ট্যাবে বন্ধুর ঠিক ফোন নম্বর বা ইমেইল লিখে খুঁজুন, তারপর ‘যোগ করুন’ চাপুন। সে গ্রহণ করলে চ্যাট শুরু হবে।"],
+   ["মেসেজ কীভাবে মুছব?", "মেসেজে ট্যাপ করুন। ‘সবার জন্য মুছুন’ (নিজের মেসেজ) বা ‘শুধু আমার জন্য মুছুন’ বেছে নিন।"],
+   ["স্টোরি কতক্ষণ থাকে?", "২৪ ঘণ্টা। শুধু আপনার বন্ধুরা দেখতে পায়, আর আপনি দেখতে পান কে দেখেছে।"],
+   ["পাসওয়ার্ড ভুলে গেলে?", "ফোন নম্বর দিয়ে খোলা অ্যাকাউন্টের পাসওয়ার্ড ফেরত পাওয়ার উপায় নেই। ইমেইলে খোলা অ্যাকাউন্ট রাখলে সুবিধা বেশি।"],
+   ["ভয়েস বা ক্যামেরা চলছে না?", "সেটিংস → অ্যাপ পারমিশন পেজে অনুমতি ঠিক করুন।"],
+   ["কল কীভাবে করব?", "বন্ধুর চ্যাট খুলে ওপরের 📞 (অডিও) বা 🎥 (ভিডিও) চাপুন। কল পেতে অ্যাপটি খোলা থাকতে হবে। কল না লাগলে দুজনেরই নেট ও মাইক/ক্যামেরার অনুমতি দেখুন।"]
+  ].forEach(([q, a]) => { const d = el("div"); d.append(el("b", null, q), el("p", null, a)); pad.appendChild(d); });
+  b.appendChild(pad);
+}
+
+/* ---------------- opening chats ---------------- */
+async function ensureDirect(uid) {
+  const id = fid(me.uid, uid); const ref = doc(db, "chats", id);
+  const s = await getDoc(ref);
+  if (!s.exists()) await setDoc(ref, { type: "direct", members: [me.uid, uid].sort(), createdAt: serverTimestamp(), reads: {} });
+  return id;
+}
+async function openDirect(uid) {
+  try { const id = await ensureDirect(uid); openChat(id, false, { type: "direct", members: [me.uid, uid].sort() }); }
+  catch (e) { onErr(e); }
+}
+function closeChatListeners() {
+  if (unsubMsgs) unsubMsgs(); if (unsubChat) unsubChat();
+  unsubMsgs = unsubChat = null; msgEls.clear(); lastMsgs = []; markedFor = null; cancelRec();
+}
+function openChat(id, replaceHistory, seed) {
+  closeChatListeners();
+  current = id; currentData = chats.find((c) => c.id === id) || (seed ? { id, reads: {}, ...seed } : null);
+  $("msgs").textContent = ""; $("msgInput").value = ""; chatFilter = ""; $("chatSearch").value = ""; $("chatSearchBar").hidden = true; setReply(null);
+  if (replaceHistory) history.replaceState({ v: "chat" }, ""); else history.pushState({ v: "chat" }, "");
+  show("chat"); renderChatHeader();
+  unsubChat = onSnapshot(doc(db, "chats", id), (s) => {
+    if (!s.exists()) return;
+    currentData = { id, ...s.data(SNAP) };
+    currentData.members.forEach(ensureProfile);
+    renderChatHeader(); updateMsgMeta(); markRead();
+  }, onErr);
+  unsubMsgs = onSnapshot(query(collection(db, "chats", id, "messages"), orderBy("createdAt", "desc"), limit(150)), (snap) => {
+    lastMsgs = snap.docs.map((d) => ({ id: d.id, pending: d.metadata.hasPendingWrites, ...d.data(SNAP) })).reverse();
+    paintMessages(); markRead();
+  }, onErr);
+}
+$("backBtn").onclick = () => history.back();
+window.addEventListener("popstate", (e) => {
+  const st = e.state || { v: "main" };
+  hideStory(); closeSheet();
+  if (st.v === "main") { subStack = []; closeChatListeners(); current = null; currentData = null; show("main"); }
+  else if (st.v === "chat") { subStack = []; show("chat"); }
+  else if (st.v === "sub") { subStack.length = Math.min(subStack.length, st.d); renderSub(); show("sub"); }
+  else if (st.v === "group") show("main");
+});
+
+function renderChatHeader() {
+  if (!current || !me || !$("chat").classList.contains("active")) return;
+  const c = currentData; if (!c) return;
+  const holder = $("chatAvatar"); holder.textContent = "";
+  if (c.type === "group") {
+    holder.appendChild(avatar({ name: c.name }, 40));
+    $("chatTitle").textContent = c.name || "গ্রুপ";
+    $("chatSub").textContent = c.members.map(pName).join(", ");
+  } else {
+    const o = c.members.find((u) => u !== me.uid);
+    holder.appendChild(avatar(P(o), 40, true));
+    $("chatTitle").textContent = pName(o);
+    $("chatSub").textContent = statusText(P(o));
+  }
+}
+$("chatTitles").onclick = () => { if (currentData) pushSub(currentData.type === "group" ? "গ্রুপের তথ্য" : "যোগাযোগের তথ্য", subChatInfo); };
+function subChatInfo(b) {
+  const c = currentData; if (!c) return;
+  const wrap = el("div", "prof");
+  if (c.type === "group") {
+    wrap.appendChild(avatar({ name: c.name }, 112)); wrap.appendChild(el("h2", null, c.name || "গ্রুপ"));
+    wrap.appendChild(el("div", "info", c.members.length + " জন সদস্য")); b.appendChild(wrap);
+    b.appendChild(el("div", "section", "সদস্য"));
+    c.members.forEach((u) => { ensureProfile(u); b.appendChild(personRow(u)); });
+    const pad = el("div", "pad"); const leave = el("button", "btn danger", "গ্রুপ ছাড়ুন"); leave.onclick = leaveGroup; pad.appendChild(leave); b.appendChild(pad);
+  } else {
+    const o = c.members.find((u) => u !== me.uid), p = P(o) || {};
+    wrap.appendChild(avatar(p, 112, true)); wrap.appendChild(el("h2", null, p.name || ""));
+    if (p.about) wrap.appendChild(el("div", "info", p.about)); if (p.phone) wrap.appendChild(el("div", "info", "ফোন: +" + p.phone));
+    const st = statusText(p); if (st) wrap.appendChild(el("div", "info", st)); b.appendChild(wrap);
+    const pad = el("div", "pad"); const bl = el("button", "btn danger", "ব্লক করুন"); bl.onclick = () => blockUser(o); pad.appendChild(bl); b.appendChild(pad);
+  }
+}
+async function blockUser(uid) {
+  try {
+    await setDoc(doc(db, "blocks", me.uid + "_" + uid), { by: me.uid, who: uid, createdAt: serverTimestamp() });
+    await deleteDoc(doc(db, "friendships", fid(me.uid, uid))).catch(() => {});
+    toast(pName(uid) + " কে ব্লক করা হয়েছে");
+    history.go(-(subStack.length + 1));
+  } catch (e) { onErr(e); }
+}
+async function leaveGroup() {
+  const c = currentData; if (!c) return;
+  try {
+    await updateDoc(doc(db, "chats", c.id), { members: c.members.filter((u) => u !== me.uid) });
+    toast("গ্রুপ ছেড়েছেন"); history.go(-(subStack.length + 1));
+  } catch (e) { onErr(e); }
+}
+$("moreBtn").onclick = () => {
+  if (!current) return;
+  const isGroup = currentData && currentData.type === "group";
+  openSheet((b) => {
+    b.append(
+      sheetItem("ℹ তথ্য দেখুন", () => $("chatTitles").onclick()),
+      sheetItem("🔎 চ্যাটে খুঁজুন", () => { $("chatSearchBar").hidden = false; $("chatSearch").focus(); }),
+      sheetItem(muted()[current] ? "🔔 নোটিফিকেশন চালু করুন" : "🔕 নোটিফিকেশন বন্ধ করুন", () => { const m = muted(); if (m[current]) delete m[current]; else m[current] = 1; LS.set("pc_muted", m); toast(m[current] ? "মিউট করা হয়েছে" : "চালু করা হয়েছে"); scheduleRender(); }),
+      sheetItem("🧹 চ্যাট পরিষ্কার (শুধু আমার জন্য)", () => { const cl = LS.get("pc_clear", {}); cl[current] = Date.now(); LS.set("pc_clear", cl); paintMessages(); toast("চ্যাট পরিষ্কার হয়েছে"); }),
+      isGroup ? sheetItem("🚪 গ্রুপ ছাড়ুন", () => { currentData && leaveGroup(); }, "danger")
+              : sheetItem("🚫 ব্লক করুন", () => { const o = currentData.members.find((u) => u !== me.uid); blockUser(o); }, "danger")
+    );
+  });
+};
+$("chatSearch").addEventListener("input", () => { chatFilter = $("chatSearch").value.trim(); paintMessages(); });
+$("videoBtn").onclick = () => chatCall("video");
+$("callBtn").onclick = () => chatCall("audio");
+function chatCall(type) {
+  if (!currentData) return;
+  if (currentData.type === "group") return toast("গ্রুপ কল এখনো নেই, বন্ধুর চ্যাট থেকে কল করুন");
+  startCall(currentData.members.find((u) => u !== me.uid), type);
+}
+
+/* ---------------- messages ---------------- */
+function tickState(m) {
+  if (m.pending) return "pending";
+  const c = currentData; if (!c) return "sent";
+  const others = c.members.filter((u) => u !== me.uid); const t = ms(m.createdAt);
+  const myOff = P(me.uid) && P(me.uid).noReceipts;
+  const seen = !myOff && others.length && t && others.every((u) => !(P(u) && P(u).noReceipts) && ms((c.reads || {})[u]) >= t);
+  return seen ? "seen" : "sent";
+}
+function previewOf(p) {
+  return { image: "📷 ছবি", audio: "🎤 ভয়েস মেসেজ", file: "📄 " + (p.fileName || "ফাইল"), location: "📍 লোকেশন", contact: "👤 " + (p.contact ? p.contact.name : ""),
+    poll: "📊 " + (p.poll ? p.poll.q : ""), event: "📅 " + (p.event ? p.event.title : "") }[p.kind] || (p.text || "").slice(0, 80);
+}
+function msgPreview(m) { return m.deleted ? "মেসেজটি মুছে ফেলা হয়েছে" : previewOf(m); }
+
+function buildMsg(m) {
+  const mine = m.senderId === me.uid;
+  const wrap = el("div", "m " + (mine ? "mine" : "theirs"));
+  const bubble = el("div", "bubble"); const body = el("div", "body"); const reacts = el("div", "reacts");
+  const meta = el("div", "meta"); const time = el("span"); const tick = el("span", "tick");
+  const more = el("button", "more", "⌄"); more.type = "button"; more.setAttribute("aria-label", "মেসেজ মেনু"); more.onclick = (ev) => { ev.stopPropagation(); if (wrap._m) msgSheet(wrap._m); };
+  meta.append(more, time); if (mine) meta.append(tick);
+  bubble.append(body, meta); wrap.append(bubble, reacts);
+  wrap._r = { mine, bubble, body, time, tick, who: null, reacts };
+  bubble.onclick = (ev) => { if (ev.target.closest("a,button,audio")) return; if (wrap._m) msgSheet(wrap._m); };
+  // long-press: show our own menu instead of the browser's "Copy/Download image" menu
+  wrap.addEventListener("contextmenu", (ev) => { ev.preventDefault(); if (wrap._m) msgSheet(wrap._m); });
+  return wrap;
+}
+function votesOf(m) { return m.votes || {}; }
+function fillMsg(node, m) {
+  const r = node._r;
+  const sig = [m.deleted ? 1 : 0, m.text, (m.image || "").length, m.kind, (m.file || "").length, JSON.stringify(m.reactions || {}), JSON.stringify(m.votes || {})].join("|");
+  node._m = m;
+  if (node._sig === sig) return;
+  node._sig = sig; r.body.textContent = ""; r.reacts.textContent = "";
+  if (m.deleted) { r.body.appendChild(el("div", "gone", "🚫 মেসেজটি মুছে ফেলা হয়েছে")); return; }
+  if (m.reply) { const q = el("div", "quote"); q.append(el("b", null, m.reply.who || ""), el("span", null, m.reply.text || "")); r.body.appendChild(q); }
+  const kind = m.kind || (m.image ? "image" : "text");
+  if (m.image) { const pw = el("div", "picwrap"); const img = document.createElement("img"); img.className = "pic"; img.src = m.image; img.alt = "ছবি"; img.draggable = false; pw.appendChild(img); pw.onclick = (ev) => { ev.stopPropagation(); openViewer(m.image); }; r.body.appendChild(pw); }
+  if (kind === "audio" && m.file) { const a = document.createElement("audio"); a.controls = true; a.preload = "none"; a.src = m.file; r.body.appendChild(a); }
+  if (kind === "file" && m.file) {
+    const c = el("div", "card"); c.appendChild(el("div", "ct", "📄 " + (m.fileName || "ফাইল")));
+    const a = el("a", null, "ডাউনলোড"); a.href = m.file; a.download = m.fileName || "file"; c.appendChild(a); r.body.appendChild(c);
+  }
+  if (kind === "location" && m.loc) {
+    const c = el("div", "card"); c.appendChild(el("div", "ct", "📍 লোকেশন"));
+    const a = el("a", null, "ম্যাপে দেখুন"); a.target = "_blank"; a.rel = "noopener";
+    a.href = "https://www.openstreetmap.org/?mlat=" + m.loc.lat + "&mlon=" + m.loc.lng + "#map=16/" + m.loc.lat + "/" + m.loc.lng; c.appendChild(a); r.body.appendChild(c);
+  }
+  if (kind === "contact" && m.contact) {
+    const c = el("div", "card"); c.appendChild(el("div", "ct", "👤 " + m.contact.name));
+    const a = el("a", null, m.contact.phone); a.href = "tel:" + m.contact.phone; c.appendChild(a); r.body.appendChild(c);
+  }
+  if (kind === "poll" && m.poll) {
+    const c = el("div", "card"); c.appendChild(el("div", "ct", "📊 " + m.poll.q));
+    const v = votesOf(m), total = Object.keys(v).length;
+    m.poll.options.forEach((o, i) => {
+      const n = Object.values(v).filter((x) => x === i).length;
+      const b = el("button", "opt" + (v[me.uid] === i ? " mine-v" : "")); b.type = "button";
+      const bar = el("i"); bar.style.width = (total ? Math.round(n * 100 / total) : 0) + "%";
+      const sp = el("span"); sp.append(el("span", null, o), el("span", null, String(n))); b.append(bar, sp);
+      b.onclick = (ev) => { ev.stopPropagation(); updateDoc(doc(db, "chats", current, "messages", m.id), { ["votes." + me.uid]: i }).catch(onErr); };
+      c.appendChild(b);
+    });
+    c.appendChild(el("div", "cs", total + " ভোট")); r.body.appendChild(c);
+  }
+  if (kind === "event" && m.event) {
+    const c = el("div", "card"); c.appendChild(el("div", "ct", "📅 " + m.event.title));
+    if (m.event.when) c.appendChild(el("div", "cs", new Date(m.event.when).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" })));
+    if (m.event.place) c.appendChild(el("div", "cs", "স্থান: " + m.event.place));
+    const v = votesOf(m), yes = Object.values(v).filter((x) => x === "y").length, no = Object.values(v).filter((x) => x === "n").length;
+    const row = el("div", "evbtns");
+    [["y", "✅ যাব (" + yes + ")"], ["n", "❌ যাব না (" + no + ")"]].forEach(([k, label]) => {
+      const b = actionBtn(label, v[me.uid] === k ? "" : "ghost", (ev) => { ev.stopPropagation(); updateDoc(doc(db, "chats", current, "messages", m.id), { ["votes." + me.uid]: k }).catch(onErr); });
+      row.appendChild(b);
+    });
+    c.appendChild(row); r.body.appendChild(c);
+  }
+  if (m.text) r.body.appendChild(el("div", "txt", m.text));
+  const rc = {}; Object.values(m.reactions || {}).forEach((e) => { rc[e] = (rc[e] || 0) + 1; });
+  Object.entries(rc).forEach(([e, n]) => r.reacts.appendChild(el("span", null, e + (n > 1 ? " " + n : ""))));
+}
+function visibleMsgs() {
+  const cl = LS.get("pc_clear", {})[current] || 0, f = chatFilter.toLowerCase();
+  return lastMsgs.filter((m) => !(m.hiddenFor && m.hiddenFor[me.uid]) && (!cl || m.pending || ms(m.createdAt) > cl) && (!f || (m.text || "").toLowerCase().includes(f)));
+}
+function paintMessages() {
+  if (!current) return;
+  const box = $("msgs"); const list = visibleMsgs();
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 140 || !box.children.length;
+  const ids = new Set(list.map((m) => m.id));
+  [...msgEls.keys()].forEach((k) => { if (!ids.has(k)) { msgEls.get(k).remove(); msgEls.delete(k); } });
+  list.forEach((m, i) => {
+    let node = msgEls.get(m.id);
+    if (!node) { node = buildMsg(m); msgEls.set(m.id, node); }
+    fillMsg(node, m);
+    if (box.children[i] !== node) box.insertBefore(node, box.children[i] || null);
+  });
+  updateMsgMeta();
+  if (near) box.scrollTop = box.scrollHeight;
+}
+function updateMsgMeta() {
+  if (!current) return;
+  const group = currentData && currentData.type === "group";
+  msgEls.forEach((node) => {
+    const m = node._m, r = node._r; if (!m) return;
+    r.time.textContent = fmtTime(m.createdAt);
+    if (r.mine) {
+      const s = tickState(m);
+      r.tick.textContent = s === "pending" ? "🕓" : (s === "sent" ? "✓" : "✓✓");
+      r.tick.className = "tick" + (s === "seen" ? " seen" : "");
+    } else if (group) {
+      if (!r.who) { r.who = el("div", "who"); r.bubble.insertBefore(r.who, r.body); }
+      r.who.textContent = pName(m.senderId);
+    }
+  });
+}
+function markRead() {
+  if (!current || !currentData || document.hidden) return;
+  const last = lastMsgs[lastMsgs.length - 1];
+  if (!last || last.senderId === me.uid || last.pending) return;
+  const t = ms(last.createdAt), mineAt = ms((currentData.reads || {})[me.uid]);
+  if (mineAt && mineAt >= t) return;
+  if (markedFor === last.id) return; markedFor = last.id;
+  updateDoc(doc(db, "chats", current), { ["reads." + me.uid]: serverTimestamp() }).catch(() => { markedFor = null; });
+}
+
+/* message actions: react, reply, copy, forward, delete */
+const EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+function msgSheet(m) {
+  const mine = m.senderId === me.uid;
+  openSheet((b) => {
+    if (!m.deleted) {
+      const row = el("div", "emojis"); const mineE = (m.reactions || {})[me.uid];
+      EMOJIS.forEach((e) => { const x = el("button", mineE === e ? "on" : "", e); x.type = "button"; x.onclick = () => { closeSheet(); react(m, e, mineE === e); }; row.appendChild(x); });
+      b.appendChild(row);
+      b.appendChild(sheetItem("↩ রিপ্লাই", () => setReply(m)));
+      if (m.text) b.appendChild(sheetItem("📋 কপি", async () => { try { await navigator.clipboard.writeText(m.text); toast("কপি হয়েছে"); } catch { toast("কপি করা যায়নি"); } }));
+      b.appendChild(sheetItem("➡ ফরওয়ার্ড", () => forwardSheet(m)));
+    }
+    b.appendChild(sheetItem("🗑 শুধু আমার জন্য মুছুন", () => updateDoc(doc(db, "chats", current, "messages", m.id), { ["hiddenFor." + me.uid]: true }).catch(onErr)));
+    if (mine && !m.deleted) b.appendChild(sheetItem("🗑 সবার জন্য মুছুন (আনসেন্ট)", () => unsend(m.id), "danger"));
+  });
+}
+function react(m, e, off) {
+  updateDoc(doc(db, "chats", current, "messages", m.id), { ["reactions." + me.uid]: off ? deleteField() : e }).catch(onErr);
+}
+async function unsend(mid) {
+  try { await updateDoc(doc(db, "chats", current, "messages", mid), { deleted: true, text: "", image: "", file: "" }); }
+  catch (e) { onErr(e); }
+}
+function setReply(m) {
+  replyTo = m ? { id: m.id, who: m.senderId === me.uid ? "আপনি" : pName(m.senderId), text: msgPreview(m).slice(0, 80) } : null;
+  $("replyBar").hidden = !replyTo;
+  if (replyTo) { $("replyWho").textContent = replyTo.who; $("replyTxt").textContent = replyTo.text; $("msgInput").focus(); }
+}
+$("replyX").onclick = () => setReply(null);
+function forwardSheet(m) {
+  const items = [];
+  chats.filter((c) => c.type === "group").forEach((c) => items.push({ label: "👥 " + (c.name || "গ্রুপ"), go: async () => c.id }));
+  friendIds().forEach((u) => items.push({ label: "👤 " + pName(u), go: () => ensureDirect(u) }));
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", "কাকে ফরওয়ার্ড করবেন?"));
+    if (!items.length) b.appendChild(el("div", "note", "কেউ নেই"));
+    items.forEach((it) => {
+      const x = el("button", "sitem", it.label); x.type = "button";
+      x.onclick = async () => {
+        closeSheet();
+        try {
+          const id = await it.go(); const p = { kind: m.kind || "text" };
+          ["text", "image", "file", "fileName", "fileType", "loc", "contact", "poll", "event"].forEach((k) => { if (m[k]) p[k] = m[k]; });
+          await sendRaw(id, p, previewOf(p)); toast("ফরওয়ার্ড করা হয়েছে");
+        } catch (e) { onErr(e); }
+      };
+      b.appendChild(x);
+    });
+  });
+}
+
+/* sending */
+async function sendRaw(chatId, payload, preview) {
+  const base = { text: "", image: "", senderId: me.uid, createdAt: serverTimestamp(), deleted: false, kind: "text", reactions: {}, hiddenFor: {}, votes: {} };
+  await addDoc(collection(db, "chats", chatId, "messages"), { ...base, ...payload });
+  await updateDoc(doc(db, "chats", chatId), { lastMessage: preview, lastSender: me.uid, updatedAt: serverTimestamp(), ["reads." + me.uid]: serverTimestamp() });
+}
+async function sendHere(payload) {
+  if (!current) return;
+  const p = { ...payload }; if (replyTo) { p.reply = replyTo; setReply(null); }
+  try { await sendRaw(current, p, previewOf(payload)); }
+  catch (e) { onErr(e); toast("মেসেজ পাঠানো যায়নি"); }
+}
+$("sendForm").onsubmit = (e) => {
+  e.preventDefault();
+  const t = $("msgInput").value.trim(); if (!t) return;
+  $("msgInput").value = ""; sendHere({ text: t, kind: "text" });
+};
+function pickFile(accept, cb, capture) {
+  const i = document.createElement("input"); i.type = "file"; if (accept) i.accept = accept; if (capture) i.setAttribute("capture", capture);
+  i.onchange = () => { const f = i.files[0]; if (f) cb(f); }; i.click();
+}
+$("attachBtn").onclick = () => {
+  openSheet((b) => {
+    const g = el("div", "agrid");
+    [["🖼", "গ্যালারি", () => $("fileGallery").click()], ["📷", "ক্যামেরা", () => $("fileCamera").click()], ["📍", "লোকেশন", sendLocation],
+     ["👤", "কন্টাক্ট", sendContact], ["📄", "ডকুমেন্ট", () => $("fileDoc").click()], ["📊", "পোল", makePoll], ["📅", "ইভেন্ট", makeEvent]
+    ].forEach(([ic, label, fn]) => {
+      const x = el("button"); x.type = "button"; x.append(el("span", "ai", ic), label); x.onclick = () => { closeSheet(); fn(); }; g.appendChild(x);
+    });
+    b.appendChild(g);
+  });
+};
+async function sendImageFile(f) {
+  toast("ছবি পাঠানো হচ্ছে…");
+  try { const data = await shrink(f, 1000); await sendHere({ kind: "image", image: data }); }
+  catch (er) { onErr(er); toast("ছবিটি পাঠানো গেল না, অন্য ছবি দিন"); }
+}
+$("fileGallery").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) sendImageFile(f); };
+$("fileCamera").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) sendImageFile(f); };
+function mediaErrText(e) {
+  const n = (e && e.name) || "";
+  const why = {
+    NotAllowedError: "অনুমতি আটকানো আছে। (১) Chrome সাইট সেটিংসে মাইক ‘Allow’ আছে কি দেখুন, (২) ফোনের Settings → Apps → Chrome → Permissions → Microphone ‘Allow’ করুন, (৩) স্ক্রিনে ভাসমান বাবল/ওভারলে থাকলে বন্ধ করুন, (৪) হোম স্ক্রিন থেকে ইনস্টল করা Pro chat হলে Settings → Apps → Pro chat-এও অনুমতি দিন।",
+    PermissionDeniedError: "অনুমতি আটকানো আছে। ফোনের Settings → Apps → Chrome → Permissions → Microphone ‘Allow’ করুন।",
+    NotFoundError: "ফোনে মাইক্রোফোন খুঁজে পাওয়া যাচ্ছে না।",
+    NotReadableError: "অন্য কোনো অ্যাপ (কল, ভয়েস রেকর্ডার, স্ক্রিন রেকর্ডার) মাইক ব্যবহার করছে, বা ফোনের মাইক ব্লক করা আছে। সেগুলো বন্ধ করে আবার চেষ্টা করুন।",
+    AbortError: "মাইক চালু করা যায়নি, আবার চেষ্টা করুন।",
+    SecurityError: "নিরাপত্তার কারণে ব্লক হয়েছে। লিংকটি সরাসরি Chrome-এ https দিয়ে খুলুন।",
+    TypeError: "এই ব্রাউজারে মাইক সাপোর্ট নেই। Chrome-এ খুলুন।"
+  }[n] || (e && e.message === "nomic" ? "এই ব্রাউজারে মাইক সাপোর্ট নেই। Chrome-এ খুলুন।" : "অজানা সমস্যা।");
+  return "কারণ" + (n ? " (" + n + ")" : "") + ": " + why;
+}
+function micHelp(e) {
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", "মাইক্রোফোন চালু করা যাচ্ছে না"));
+    if (e) { const w = el("div", "note", mediaErrText(e)); w.style.color = "var(--danger)"; b.appendChild(w); }
+    b.appendChild(el("div", "note", "ব্রাউজারে মাইক্রোফোনের অনুমতি দেওয়া নেই, অথবা লিংকটি অন্য কোনো অ্যাপের (Messenger, Facebook ইত্যাদি) ভেতরের ব্রাউজারে খোলা হয়েছে। নিচের যেকোনো একটি উপায়ে ভয়েস পাঠাতে পারবেন।"));
+    b.append(
+      sheetItem("🎙 ফোনের রেকর্ডার দিয়ে ভয়েস পাঠান", () => $("fileAudio").click()),
+      sheetItem("🛡 অনুমতি ঠিক করার নিয়ম দেখুন", () => pushSub("অ্যাপ পারমিশন", subPerms))
+    );
+  });
+}
+$("fileAudio").onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  if (f.size > 600 * 1024) return toast("ভয়েস বড় (সর্বোচ্চ প্রায় ৬০০ KB, ছোট করে রেকর্ড করুন)");
+  try { const data = await toDataURL(f); await sendHere({ kind: "audio", file: data, fileType: f.type || "audio/mpeg" }); }
+  catch (er) { onErr(er); }
+};
+$("fileDoc").onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  if (f.size > 600 * 1024) return toast("ফাইল বড় (সর্বোচ্চ প্রায় ৬০০ KB)");
+  try { const data = await toDataURL(f); await sendHere({ kind: "file", file: data, fileName: f.name.slice(0, 80), fileType: f.type || "" }); }
+  catch (er) { onErr(er); }
+};
+function sendLocation() {
+  if (!navigator.geolocation) return toast("এই ফোনে লোকেশন সম্ভব নয়");
+  toast("লোকেশন নেওয়া হচ্ছে…");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => sendHere({ kind: "location", loc: { lat: +pos.coords.latitude.toFixed(5), lng: +pos.coords.longitude.toFixed(5) } }),
+    () => toast("লোকেশনের অনুমতি দিন"), { enableHighAccuracy: true, timeout: 15000 });
+}
+async function sendContact() {
+  if (navigator.contacts && navigator.contacts.select) {
+    try {
+      const r = await navigator.contacts.select(["name", "tel"], { multiple: false });
+      if (r && r[0] && r[0].tel && r[0].tel[0]) return sendHere({ kind: "contact", contact: { name: ((r[0].name && r[0].name[0]) || "নামহীন").slice(0, 40), phone: String(r[0].tel[0]).slice(0, 20) } });
+    } catch { /* fall through to manual form */ }
+  }
+  openForm("কন্টাক্ট পাঠান", [{ key: "name", ph: "নাম", max: 40 }, { key: "phone", type: "tel", ph: "ফোন নম্বর", max: 20 }], "পাঠান",
+    (v) => { if (!v.name || !v.phone) return "নাম ও নম্বর লিখুন"; sendHere({ kind: "contact", contact: { name: v.name, phone: v.phone } }); return null; });
+}
+function makePoll() {
+  openForm("পোল তৈরি করুন", [{ key: "q", ph: "প্রশ্ন", max: 120 }, { key: "o1", ph: "অপশন ১", max: 60 }, { key: "o2", ph: "অপশন ২", max: 60 }, { key: "o3", ph: "অপশন ৩ (ঐচ্ছিক)", max: 60 }, { key: "o4", ph: "অপশন ৪ (ঐচ্ছিক)", max: 60 }], "পাঠান",
+    (v) => { const o = [v.o1, v.o2, v.o3, v.o4].filter(Boolean); if (!v.q || o.length < 2) return "প্রশ্ন ও কমপক্ষে ২টি অপশন দিন"; sendHere({ kind: "poll", poll: { q: v.q, options: o } }); return null; });
+}
+function makeEvent() {
+  openForm("ইভেন্ট তৈরি করুন", [{ key: "title", ph: "ইভেন্টের নাম", max: 80 }, { key: "when", type: "datetime-local" }, { key: "place", ph: "স্থান (ঐচ্ছিক)", max: 80 }], "পাঠান",
+    (v) => { if (!v.title) return "নাম লিখুন"; const t = v.when ? new Date(v.when).getTime() : 0; sendHere({ kind: "event", event: { title: v.title, when: t || 0, place: v.place } }); return null; });
+}
+
+/* voice messages */
+let rec = null;
+function fmtDur(s) { return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+$("micBtn").onclick = async () => {
+  if (!current) return;
+  let stream;
+  try { if (!navigator.mediaDevices || !window.MediaRecorder) throw new Error("nomic"); stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { return micHelp(e); }
+  const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+  const mr = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 24000 } : { audioBitsPerSecond: 24000 });
+  const chunks = []; mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  const r = { mr, stream, chunks, chatId: current, start: Date.now(), cancel: false, timer: null };
+  rec = r;
+  mr.onstop = async () => {
+    stream.getTracks().forEach((t) => t.stop()); clearInterval(r.timer);
+    if (rec === r) rec = null; $("recBar").hidden = true; $("sendForm").hidden = false;
+    if (r.cancel || !chunks.length) return;
+    try {
+      const blob = new Blob(chunks, { type: mr.mimeType || "audio/webm" }); const data = await toDataURL(blob);
+      if (data.length > 850000) return toast("রেকর্ডিং বড় হয়ে গেছে");
+      if (r.chatId !== current) return toast("চ্যাট বদলে গেছে, ভয়েস পাঠানো হয়নি");
+      await sendHere({ kind: "audio", file: data, fileType: blob.type });
+    } catch (e) { onErr(e); }
+  };
+  mr.start(); $("sendForm").hidden = true; $("recBar").hidden = false; $("recT").textContent = "0:00";
+  r.timer = setInterval(() => { const s = Math.floor((Date.now() - r.start) / 1000); $("recT").textContent = fmtDur(s); if (s >= 90) stopRec(false); }, 500);
+};
+function stopRec(cancel) { if (!rec) return; rec.cancel = cancel; try { rec.mr.stop(); } catch { rec.stream.getTracks().forEach((t) => t.stop()); } }
+function cancelRec() { if (rec) stopRec(true); }
+$("recCancel").onclick = () => stopRec(true);
+$("recSend").onclick = () => stopRec(false);
+
+function openViewer(src) { const v = $("viewer"); v.querySelector("img").src = src; v.hidden = false; }
+$("viewer").onclick = () => { $("viewer").hidden = true; };
+
+
+/* ---------------- audio / video calls (WebRTC, signalling through the database) ---------------- */
+// STUN finds a direct path between two phones. The TURN entry is a free public relay used only when a direct path is impossible
+// (some mobile networks). It is shared and best-effort; replace it with your own TURN server for guaranteed calls.
+const RTC_CONFIG = { iceServers: [
+  { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turn:openrelay.metered.ca:443?transport=tcp"], username: "openrelayproject", credential: "openrelayproject" }
+] };
+let call = null, ringTimer = null;
+const handledCalls = new Set();
+function getMedia(type, facing) {
+  return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: type === "video" ? { facingMode: facing || "user", width: { ideal: 640 }, height: { ideal: 480 } } : false });
+}
+/* tries microphone+camera; if something is blocked the call still works in "listen / watch only" mode */
+async function getMediaSafe(type) {
+  const md = navigator.mediaDevices, vid = { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } };
+  try { return { stream: await getMedia(type), err: null }; }
+  catch (err) {
+    if (type === "video") {
+      try { return { stream: await md.getUserMedia({ video: vid }), err }; } catch {}
+      try { return { stream: await md.getUserMedia({ audio: true }), err }; } catch {}
+    }
+    return { stream: new MediaStream(), err };
+  }
+}
+function limitedNote(c, err) {
+  const a = c.local.getAudioTracks().length, v = c.local.getVideoTracks().length;
+  const parts = [];
+  if (!a) parts.push("মাইক চালু নেই, অন্যজন আপনার কথা শুনতে পাবে না");
+  if (c.type === "video" && !v) parts.push("ক্যামেরা চালু নেই, অন্যজন আপনাকে দেখতে পাবে না");
+  $("callNote").textContent = parts.length ? "⚠ " + parts.join("। ") + "। (সেটিংস → অ্যাপ পারমিশন দেখুন)" : "";
+  if (parts.length) toast(err ? mediaErrText(err).slice(0, 110) + "…" : "অনুমতি নেই");
+}
+function startRing() {
+  stopRing();
+  const once = () => { if (settings.sound) { beep(); setTimeout(beep, 260); } try { navigator.vibrate && navigator.vibrate([350, 150, 350]); } catch {} };
+  once(); ringTimer = setInterval(once, 2000);
+}
+function stopRing() { clearInterval(ringTimer); ringTimer = null; try { navigator.vibrate && navigator.vibrate(0); } catch {} }
+function callUI() {
+  const c = call; $("call").hidden = !c; if (!c) return;
+  const video = c.type === "video";
+  $("callName").textContent = pName(c.peer);
+  const av = $("callAv"); if (av.dataset.k !== c.peer + (P(c.peer) && P(c.peer).photo ? "p" : "")) { av.textContent = ""; av.appendChild(avatar(P(c.peer), 110)); av.dataset.k = c.peer + (P(c.peer) && P(c.peer).photo ? "p" : ""); }
+  const live = c.state === "live";
+  $("callInfo").classList.toggle("live-video", live && video);
+  $("remoteVideo").classList.toggle("off", !video);
+  $("localVideo").hidden = !(video && c.local && c.local.getVideoTracks().length && c.state !== "in-ring");
+  $("cAcc").hidden = c.state !== "in-ring";
+  const media = c.state !== "in-ring";
+  const hasA = !!(c.local && c.local.getAudioTracks().length), hasV = !!(c.local && c.local.getVideoTracks().length);
+  $("cMute").hidden = !(media && hasA); $("cCam").hidden = !(media && video && hasV); $("cFlip").hidden = !(media && video && hasV);
+  const t = { "out-ring": (video ? "ভিডিও কল · " : "অডিও কল · ") + "রিং হচ্ছে…", "in-ring": (video ? "ভিডিও কল আসছে…" : "অডিও কল আসছে…"), connecting: "সংযোগ হচ্ছে…", live: "" }[c.state];
+  if (!live) $("callStatus").textContent = t || "";
+}
+function setCallState(st) { if (call) { call.state = st; callUI(); } }
+function mediaHelp(e) {
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", "মাইক্রোফোন বা ক্যামেরা চালু করা যায়নি"));
+    if (e) { const w = el("div", "note", mediaErrText(e)); w.style.color = "var(--danger)"; b.appendChild(w); }
+    b.appendChild(el("div", "note", "কল করতে ব্রাউজারে মাইক্রোফোন (ভিডিওতে ক্যামেরাও) এর অনুমতি দিতে হয়। লিংকটি Messenger/Facebook-এর ভেতরের ব্রাউজারে খুললে অনুমতি কাজ করে না, তখন Chrome-এ খুলুন।"));
+    b.appendChild(sheetItem("🛡 অনুমতি ঠিক করার নিয়ম দেখুন", () => pushSub("অ্যাপ পারমিশন", subPerms)));
+  });
+}
+function newCallObj(over) { return Object.assign({ pend: [], queue: [], seen: new Set(), unsubs: [], ready: false, state: "out-ring", local: null, pc: null }, over); }
+function buildPc() {
+  const c = call, pc = new RTCPeerConnection(RTC_CONFIG); c.pc = pc;
+  c.local.getTracks().forEach((t) => pc.addTrack(t, c.local));
+  if (c.dir === "out") {
+    if (!c.local.getAudioTracks().length) pc.addTransceiver("audio", { direction: "recvonly" });
+    if (c.type === "video" && !c.local.getVideoTracks().length) pc.addTransceiver("video", { direction: "recvonly" });
+  }
+  pc.ontrack = (e) => { const rv = $("remoteVideo"); rv.srcObject = e.streams[0] || new MediaStream([e.track]); rv.play().catch(() => {}); };
+  pc.onicecandidate = (e) => { if (e.candidate) sendIce(c, e.candidate.toJSON()); };
+  pc.onconnectionstatechange = () => {
+    if (call !== c) return; const st = pc.connectionState;
+    if (st === "connected") onLive();
+    else if (st === "failed") endCall("fail", false);
+    else if (st === "disconnected") setTimeout(() => { if (call === c && pc.connectionState === "disconnected") endCall("lost", false); }, 8000);
+  };
+}
+function sendIce(c, cand) {
+  if (!c.ready) { c.pend.push(cand); return; }
+  addDoc(collection(db, "calls", c.id, "ice"), { from: me.uid, c: JSON.stringify(cand) }).catch(() => {});
+}
+function flushIceOut(c) { c.ready = true; c.pend.splice(0).forEach((x) => sendIce(c, x)); }
+function flushIceIn(c) { c.queue.splice(0).forEach((x) => c.pc.addIceCandidate(x).catch(() => {})); }
+function listenCall(c) {
+  c.unsubs.push(onSnapshot(c.ref, (s) => {
+    if (call !== c || !s.exists()) return; const d = s.data(SNAP); c.data = d;
+    if (c.dir === "out" && d.answer && !c.gotAnswer) {
+      c.gotAnswer = true; setCallState("connecting");
+      c.pc.setRemoteDescription(d.answer).then(() => flushIceIn(c)).catch(onErr);
+    }
+    if (d.status === "declined") endCall("declined", true);
+    else if (d.status === "ended") endCall("remote", true);
+    else if (d.status === "missed") endCall(c.dir === "in" ? "cancelled" : "missed", true);
+  }, onErr));
+  c.unsubs.push(onSnapshot(collection(db, "calls", c.id, "ice"), (snap) => {
+    if (call !== c) return;
+    snap.docs.forEach((x) => {
+      if (c.seen.has(x.id)) return; const d = x.data(); if (d.from === me.uid) return; c.seen.add(x.id);
+      let cand; try { cand = JSON.parse(d.c); } catch { return; }
+      if (c.pc && c.pc.remoteDescription) c.pc.addIceCandidate(cand).catch(() => {}); else c.queue.push(cand);
+    });
+  }, () => {}));
+}
+async function startCall(uid, type) {
+  if (call) return toast("আরেকটি কল চলছে");
+  if (relation(uid) !== "friend") return toast("শুধু বন্ধুকে কল করা যায়");
+  if (!window.RTCPeerConnection || !navigator.mediaDevices) return toast("এই ব্রাউজারে কল সম্ভব নয়, Chrome ব্যবহার করুন");
+  const got = await getMediaSafe(type), local = got.stream;
+  const ref = doc(collection(db, "calls"));
+  const c = call = newCallObj({ id: ref.id, ref, peer: uid, type, dir: "out", local });
+  setCallState("out-ring"); setLocalPreview(); limitedNote(c, got.err);
+  try {
+    buildPc();
+    const offer = await c.pc.createOffer(); await c.pc.setLocalDescription(offer);
+    await setDoc(ref, { caller: me.uid, callee: uid, parts: [me.uid, uid], type, status: "ringing", offer: { type: offer.type, sdp: offer.sdp }, createdAt: serverTimestamp() });
+    handledCalls.add(ref.id);
+    flushIceOut(c); listenCall(c);
+    c.ringT = setTimeout(() => { if (call === c && c.state === "out-ring") endCall("noanswer", false); }, 45000);
+  } catch (e) { onErr(e); if (call === c) endCall("error", true); toast("কল শুরু করা যায়নি"); }
+}
+function setLocalPreview() { const lv = $("localVideo"); lv.srcObject = call && call.local && call.type === "video" ? call.local : null; if (lv.srcObject) lv.play().catch(() => {}); callUI(); }
+function incomingCall(d) {
+  handledCalls.add(d.id);
+  if (call) { updateDoc(doc(db, "calls", d.id), { status: "declined", endedAt: Date.now() }).catch(() => {}); return; }
+  const ref = doc(db, "calls", d.id);
+  const c = call = newCallObj({ id: d.id, ref, peer: d.caller, type: d.type, dir: "in", data: d, state: "in-ring", offer: d.offer });
+  callUI(); startRing(); listenCall(c);
+  c.ringT = setTimeout(() => { if (call === c && c.state === "in-ring") endCall("missedin", true); }, 50000);
+  if (document.hidden && settings.notif && "Notification" in window && Notification.permission === "granted") {
+    try { new Notification("📞 " + pName(d.caller) + " কল করছে", { body: d.type === "video" ? "ভিডিও কল" : "অডিও কল", icon: "icon-192.png" }); } catch {}
+  }
+}
+function callsChanged() {
+  if (!me) return;
+  callsAll.forEach((d) => {
+    if (d.callee === me.uid && d.status === "ringing" && !handledCalls.has(d.id) && Date.now() - ms(d.createdAt) < 60000) incomingCall(d);
+  });
+  const badge = $("badgeCalls"); const seen = LS.get("pc_calls_seen", 0);
+  const missed = callsAll.filter((d) => d.callee === me.uid && d.status === "missed" && ms(d.createdAt) > seen).length;
+  badge.hidden = !missed || tab === "Calls"; badge.textContent = missed;
+}
+async function acceptCall() {
+  const c = call; if (!c || c.state !== "in-ring") return;
+  stopRing(); clearTimeout(c.ringT);
+  const got = await getMediaSafe(c.type), local = got.stream;
+  if (call !== c) { local.getTracks().forEach((t) => t.stop()); return; }
+  c.local = local; setCallState("connecting"); setLocalPreview(); limitedNote(c, got.err);
+  try {
+    buildPc();
+    await c.pc.setRemoteDescription(c.offer); flushIceIn(c);
+    const ans = await c.pc.createAnswer(); await c.pc.setLocalDescription(ans);
+    await updateDoc(c.ref, { status: "accepted", answer: { type: ans.type, sdp: ans.sdp }, acceptedAt: Date.now() });
+    flushIceOut(c);
+  } catch (e) { onErr(e); if (call === c) endCall("error", false); toast("কল ধরা যায়নি"); }
+}
+function onLive() {
+  const c = call; if (!c || c.state === "live") return;
+  stopRing(); clearTimeout(c.ringT); c.state = "live"; c.liveAt = Date.now(); callUI();
+  c.timer = setInterval(() => { $("callStatus").textContent = fmtDur(Math.floor((Date.now() - c.liveAt) / 1000)); }, 500);
+  $("callStatus").textContent = "0:00";
+}
+function endCall(reason, remote) {
+  const c = call; if (!c) return; call = null;
+  clearTimeout(c.ringT); clearInterval(c.timer); stopRing();
+  c.unsubs.forEach((u) => u());
+  try { c.pc && c.pc.close(); } catch {}
+  if (c.local) c.local.getTracks().forEach((t) => t.stop());
+  $("remoteVideo").srcObject = null; $("localVideo").srcObject = null; $("call").hidden = true; $("callNote").textContent = "";
+  if (!remote && c.ref) {
+    const st = c.data ? c.data.status : "ringing";
+    let ns = null;
+    if (c.dir === "out" && st === "ringing") ns = "missed";
+    else if (c.dir === "in" && st === "ringing") ns = "declined";
+    else if (st === "accepted") ns = "ended";
+    if (ns) updateDoc(c.ref, { status: ns, endedAt: Date.now() }).catch(() => {});
+  }
+  const msg = { declined: "কল গ্রহণ করা হয়নি", remote: "কল শেষ হয়েছে", fail: "সংযোগ হয়নি। দুজনের নেটওয়ার্কের কারণে সরাসরি যোগাযোগ সম্ভব হয়নি", lost: "নেট সংযোগ বিচ্ছিন্ন হয়ে কল কেটে গেছে",
+    noanswer: "কেউ ধরেনি", missed: "কল কেটে দেওয়া হয়েছে", cancelled: "কল বাতিল হয়েছে", missedin: "মিসড কল" }[reason];
+  if (msg) toast(msg);
+}
+$("cEnd").onclick = () => { if (call) endCall("", false); };
+$("cAcc").onclick = acceptCall;
+$("cMute").onclick = () => { if (!call || !call.local) return; const t = call.local.getAudioTracks()[0]; if (!t) return; t.enabled = !t.enabled; $("cMute").classList.toggle("off", !t.enabled); $("cMute").textContent = t.enabled ? "🎤" : "🔇"; };
+$("cCam").onclick = () => { if (!call || !call.local) return; const t = call.local.getVideoTracks()[0]; if (!t) return; t.enabled = !t.enabled; $("cCam").classList.toggle("off", !t.enabled); };
+$("cFlip").onclick = async () => {
+  const c = call; if (!c || !c.local || !c.pc) return;
+  const old = c.local.getVideoTracks()[0]; if (!old) return;
+  const cur = (old.getSettings && old.getSettings().facingMode) || "user"; const next = cur === "user" ? "environment" : "user";
+  try {
+    const ns = await navigator.mediaDevices.getUserMedia({ video: { facingMode: next } }); const nt = ns.getVideoTracks()[0];
+    const sender = c.pc.getSenders().find((x) => x.track && x.track.kind === "video"); if (sender) await sender.replaceTrack(nt);
+    old.stop(); c.local.removeTrack(old); c.local.addTrack(nt);
+    $("localVideo").style.transform = next === "user" ? "scaleX(-1)" : "none"; $("localVideo").srcObject = c.local;
+  } catch { toast("ক্যামেরা বদলানো যায়নি"); }
+};
+
+function renderCalls() {
+  const box = $("callList"); if (!box || !me) return; box.textContent = "";
+  const nw = srow("➕", "নতুন কল", "বন্ধুকে অডিও বা ভিডিও কল করুন", newCallSheet); box.appendChild(nw);
+  box.appendChild(el("div", "section", "সাম্প্রতিক কল"));
+  const list = callsAll.slice().sort((a, b) => ms(b.createdAt) - ms(a.createdAt));
+  if (!list.length) { const e = el("div", "empty"); e.append(el("b", null, "এখনো কোনো কল নেই"), "বন্ধুর চ্যাটের ওপরের 📞 বা 🎥 চাপুন।"); box.appendChild(e); }
+  list.forEach((d) => {
+    const out = d.caller === me.uid, peer = out ? d.callee : d.caller;
+    const missed = !out && d.status === "missed";
+    const row = el("div", "row tap"); row.appendChild(avatar(P(peer), 46, true));
+    const g = el("div", "grow"); const nm = el("div", "name", pName(peer)); if (missed) nm.style.color = "var(--danger)"; g.appendChild(nm);
+    let what = out ? "↗ বের হওয়া" : "↙ আসা";
+    if (d.status === "declined") what = out ? "↗ গ্রহণ করেনি" : "↙ বাতিল করেছেন"; else if (d.status === "missed") what = out ? "↗ ধরেনি" : "↙ মিসড";
+    else if (d.status === "ringing" && Date.now() - ms(d.createdAt) > 60000) what = out ? "↗ ধরেনি" : "↙ মিসড";
+    let dur = ""; if (d.acceptedAt && d.endedAt && d.endedAt > d.acceptedAt) dur = " · " + fmtDur(Math.round((d.endedAt - d.acceptedAt) / 1000));
+    g.appendChild(el("div", "small", (d.type === "video" ? "🎥 " : "📞 ") + what + dur + " · " + fmtListTime(ms(d.createdAt)))); row.appendChild(g);
+    const b = actionBtn(d.type === "video" ? "🎥" : "📞", "ghost", (ev) => { ev.stopPropagation(); startCall(peer, d.type); }); row.appendChild(b);
+    row.onclick = () => startCall(peer, d.type);
+    box.appendChild(row);
+  });
+}
+function newCallSheet() {
+  const friends = friendIds();
+  openSheet((b) => {
+    b.appendChild(el("div", "stitle", "কাকে কল করবেন?"));
+    if (!friends.length) b.appendChild(el("div", "note", "আগে বন্ধু যোগ করুন"));
+    friends.forEach((uid) => {
+      const row = el("div", "row"); row.style.border = "0"; row.appendChild(avatar(P(uid), 40)); const g = el("div", "grow"); g.appendChild(el("div", "name", pName(uid))); row.appendChild(g);
+      row.append(actionBtn("📞", "ghost", () => { closeSheet(); startCall(uid, "audio"); }), actionBtn("🎥", "ghost", () => { closeSheet(); startCall(uid, "video"); }));
+      b.appendChild(row);
+    });
+  });
+}
+
+/* ---------------- groups ---------------- */
+function openNewGroup() {
+  $("groupName").value = "";
+  const box = $("groupPick"); box.textContent = "";
+  const friends = friendIds();
+  if (!friends.length) {
+    const e = el("div", "empty"); e.append(el("b", null, "আগে বন্ধু যোগ করুন"), "গ্রুপে শুধু বন্ধুদের রাখা যায়।"); box.appendChild(e);
+  }
+  friends.forEach((uid) => {
+    const row = el("label", "row tap"); row.appendChild(avatar(P(uid), 42));
+    const g = el("div", "grow"); g.appendChild(el("div", "name", pName(uid))); row.appendChild(g);
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.className = "check"; cb.value = uid; row.appendChild(cb);
+    box.appendChild(row);
+  });
+  history.pushState({ v: "group" }, ""); show("group");
+}
+$("groupBack").onclick = () => history.back();
+$("groupCreate").onclick = async () => {
+  const name = $("groupName").value.trim();
+  const picked = [...$("groupPick").querySelectorAll("input:checked")].map((i) => i.value);
+  if (!name) return toast("গ্রুপের নাম লিখুন");
+  if (!picked.length) return toast("কমপক্ষে একজন বন্ধু বেছে নিন");
+  $("groupCreate").disabled = true;
+  try {
+    const ref = doc(collection(db, "chats"));
+    await setDoc(ref, {
+      type: "group", name, members: [me.uid, ...picked], createdBy: me.uid, reads: {},
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessage: "গ্রুপ তৈরি হয়েছে", lastSender: me.uid
+    });
+    openChat(ref.id, true, { type: "group", name, members: [me.uid, ...picked] });
+  } catch (e) { onErr(e); toast("গ্রুপ তৈরি করা যায়নি"); }
+  finally { $("groupCreate").disabled = false; }
+};
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
